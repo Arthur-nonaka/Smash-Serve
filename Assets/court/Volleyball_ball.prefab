@@ -22,15 +22,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 18b8bade92e2bb844b4a16824d185348, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -1.3700995
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 18b8bade92e2bb844b4a16824d185348, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.981
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 18b8bade92e2bb844b4a16824d185348, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -31.435
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 18b8bade92e2bb844b4a16824d185348, type: 3}
       propertyPath: m_LocalRotation.w
@@ -75,6 +75,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 18b8bade92e2bb844b4a16824d185348, type: 3}
       propertyPath: m_Name
       value: Volleyball_ball
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 18b8bade92e2bb844b4a16824d185348, type: 3}
+      propertyPath: m_Layer
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 18b8bade92e2bb844b4a16824d185348, type: 3}
       propertyPath: m_TagString
@@ -142,6 +146,8 @@ MonoBehaviour:
   maxHitForce: 20
   gravityScale: 1
   bounciness: 0.6
+  shadowPrefab: {fileID: 3991532740629627964, guid: 2003686fe9288cb4b9f846863c7e469c, type: 3}
+  markPrefab: {fileID: 2017962444201221932, guid: 0bc5650aec1869f41a8c981da712ee7a, type: 3}
 --- !u!135 &-7566120071941418290
 SphereCollider:
   m_ObjectHideFlags: 0
