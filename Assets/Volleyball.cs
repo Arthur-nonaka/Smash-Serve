@@ -62,19 +62,19 @@ public class VolleyballBall : MonoBehaviour
         shadowTransform.localScale = new Vector3(scale, scale, 1);
     }
 
-    public void HitBall(Vector3 direction, float chargeTime, float maxChargeTime)
-    {
-        float hitPower = Mathf.Lerp(minHitForce, maxHitForce, chargeTime / maxChargeTime);
-        rb.linearVelocity = Vector3.zero; // Reset velocity before hitting
-        rb.AddForce(direction * hitPower, ForceMode.Impulse);
-        lastHitTime = Time.time;
-    }
+    // public void HitBall(Vector3 direction, float chargeTime, float maxChargeTime)
+    // {
+    //     float hitPower = Mathf.Lerp(minHitForce, maxHitForce, chargeTime / maxChargeTime);
+    //     rb.linearVelocity = Vector3.zero; // Reset velocity before hitting
+    //     rb.AddForce(direction * hitPower, ForceMode.Impulse);
+    //     lastHitTime = Time.time;
+    // }
 
-    void AttackBall()
-    {
-        Vector3 attackDirection = transform.forward + Vector3.up * 0.005f;
-        HitBall(attackDirection, maxHitForce, maxHitForce);
-    }
+    // void AttackBall()
+    // {
+    //     Vector3 attackDirection = transform.forward + Vector3.up * 0.005f;
+    //     HitBall(attackDirection, maxHitForce, maxHitForce);
+    // }
 
     void OnCollisionEnter(Collision collision)
     {
@@ -86,6 +86,7 @@ public class VolleyballBall : MonoBehaviour
             {
                 CreateMark(hitPoint, Color.green);
                 Debug.Log("Ball is in the court");
+
             }
             else
             {

@@ -305,6 +305,9 @@ public class PlayerController : MonoBehaviour
                 float hitPower = spikeForce * (hitChargeTime / maxChargeTime + 0.1f);
 
                 ballRb.AddForce(spikeDirection * hitPower, ForceMode.Impulse);
+
+                Vector3 spin = new Vector3(0, 10f, 0); // Ajuste os valores conforme necessário
+                ballRb.AddTorque(spin, ForceMode.Impulse);
             }
         }
 
