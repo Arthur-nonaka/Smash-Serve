@@ -11,9 +11,11 @@ public class PlayerController : MonoBehaviour
     public float runSpeed = 10f;
     public float gravity = -9.81f;
     public float jumpForce = 1f;
+    public float jumpChargeSpeed = 4.5f;
     public float mancheteForce = 10f;
     public float maxHitPower = 20f;
     public float setForce = 10f;
+    public float setChargeSpeed = 3.0f;
     public float maxChargeTime = 0.001f;
     public float mouseSensitivity = 2f;
     public GameObject ballPrefab;
@@ -21,7 +23,6 @@ public class PlayerController : MonoBehaviour
     public Slider jumpSlider;
 
     private Vector3 velocity;
-    private bool isGrounded;
     private float chargeTime = 0f;
     private float chargeTimeReverse = 0f;
     private float hitChargeTime = 0f;
@@ -29,6 +30,7 @@ public class PlayerController : MonoBehaviour
     private GameObject ball;
     private bool canSet = false;
     private bool canBump = false;
+    private bool stopJump = false;
 
 
     void Start()
@@ -69,7 +71,7 @@ public class PlayerController : MonoBehaviour
         // Levantamento para frente
         if (Input.GetKey(KeyCode.F)) // Charge the set
         {
-            hitChargeTime += Time.deltaTime * 4.5f;
+            hitChargeTime += Time.deltaTime * setChargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
 
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
@@ -114,46 +116,53 @@ public class PlayerController : MonoBehaviour
 
     void HandleJump()
     {
-        isGrounded = Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 1.00005f);
-        Debug.Log(isGrounded);
-        if (isGrounded && velocity.y < 0)
-            velocity.y = -2f;
-
-        if (Input.GetKey(KeyCode.Space))
+        if (Input.GetKey(KeyCode.Space) && GetIsGrounded() && !stopJump)
         {
             if (chargeTimeReverse > 0)
             {
                 chargeTime -= chargeTimeReverse;
-                chargeTimeReverse = Time.deltaTime * 4.5f;
+                chargeTimeReverse = Time.deltaTime * jumpChargeSpeed;
+                if (chargeTime <= 0)
+                {
+                    stopJump = true;
+                    chargeTime = 0f;
+                    chargeTimeReverse = 0f;
+                    jumpSlider.value = 0;
+                }
             }
             else
             {
-                chargeTime += Time.deltaTime * 4.5f;
+                chargeTime += Time.deltaTime * jumpChargeSpeed;
                 if (chargeTime >= maxChargeTime)
                 {
-                    chargeTimeReverse = Time.deltaTime * 4.5f;
+                    chargeTimeReverse = Time.deltaTime * jumpChargeSpeed;
                 }
             }
-            // else if (chargeTime <= 0)
-            // {
-            //     chargeTimeReverse = 0;
-            //     chargeTime = 0;
-            // }
 
             float jumpPercent = (chargeTime / Mathf.Abs(maxChargeTime)) * 100f;
             jumpSlider.value = jumpPercent;
         }
 
-        if (Input.GetKeyUp(KeyCode.Space) && isGrounded)
+        if (Input.GetKeyUp(KeyCode.Space) && GetIsGrounded())
         {
-            float jumpPower = jumpForce * (chargeTime / maxChargeTime + 0.5f);
-            velocity.y = Mathf.Sqrt(jumpPower * -2f * gravity);
-            chargeTime = 0f;
-            jumpSlider.value = 0;
+            if (!stopJump)
+            {
+                float jumpPower = jumpForce * (chargeTime / maxChargeTime + 0.5f);
+                velocity.y = Mathf.Sqrt(jumpPower * -2f * gravity);
+                chargeTime = 0f;
+                chargeTimeReverse = 0f;
+                jumpSlider.value = 0;
+            }
+            stopJump = false;
         }
 
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    private bool GetIsGrounded()
+    {
+        return Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 1f);
     }
 
     void PerformManchete()
