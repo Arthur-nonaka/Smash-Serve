@@ -6,7 +6,11 @@ public class PlayerController : MonoBehaviour
     public CharacterController controller;
     public Camera playerCamera;
 
+    public Animator animator;
+
     public GameObject setHitbox;
+    public GameObject bumpHitbox;
+    public GameObject spikeHitbox;
     public float walkSpeed = 5f;
     public float runSpeed = 10f;
     public float gravity = -9.81f;
@@ -15,7 +19,8 @@ public class PlayerController : MonoBehaviour
     public float mancheteForce = 10f;
     public float maxHitPower = 20f;
     public float setForce = 10f;
-    public float setChargeSpeed = 3.0f;
+    public float powerChargeSpeed = 3.0f;
+    public float spikeForce = 10f;
     public float maxChargeTime = 0.001f;
     public float mouseSensitivity = 2f;
     public GameObject ballPrefab;
@@ -30,6 +35,7 @@ public class PlayerController : MonoBehaviour
     private GameObject ball;
     private bool canSet = false;
     private bool canBump = false;
+    private bool canSpike = false;
     private bool stopJump = false;
 
 
@@ -55,23 +61,29 @@ public class PlayerController : MonoBehaviour
         HandleJump();
         HandleCamera();
         HandleBallInteraction();
+        HandleSpike();
 
         if (Input.GetMouseButton(0)) // Segurar botão esquerdo do mouse
         {
-            hitChargeTime += Time.deltaTime;
+            hitChargeTime += Time.deltaTime * powerChargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
+
+            float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
+            powerSlider.value = powerPercent;
         }
 
         if (Input.GetMouseButtonUp(0)) // Soltar botão esquerdo do mouse para bater
         {
             PerformManchete();
             hitChargeTime = 0f;
+
+            powerSlider.value = 0;
         }
 
         // Levantamento para frente
         if (Input.GetKey(KeyCode.F)) // Charge the set
         {
-            hitChargeTime += Time.deltaTime * setChargeSpeed;
+            hitChargeTime += Time.deltaTime * powerChargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
 
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
@@ -88,7 +100,7 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKey(KeyCode.R)) // Charge the set
         {
-            hitChargeTime += Time.deltaTime;
+            hitChargeTime += Time.deltaTime * powerChargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
 
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
@@ -104,13 +116,55 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    void HandleSpike()
+    {
+        if (Input.GetMouseButton(0) && !GetIsGrounded())
+        {
+            hitChargeTime += Time.deltaTime * powerChargeSpeed;
+            hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
+
+            float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
+            powerSlider.value = powerPercent;
+        }
+
+        if (Input.GetMouseButtonUp(0) && !GetIsGrounded())
+        {
+            PerformSpike();
+            hitChargeTime = 0f;
+
+            powerSlider.value = 0;
+        }
+    }
+
     void HandleMovement()
     {
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
         Vector3 move = transform.right * moveX + transform.forward * moveZ;
 
-        float speed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
+        float speed = walkSpeed;
+
+        if (GetIsGrounded())
+        {
+            speed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
+
+            if (Input.GetKey(KeyCode.Space))
+            {
+                speed *= 0.5f;
+            }
+
+            animator.SetBool("isWalking", move.magnitude > 0 && !Input.GetKey(KeyCode.LeftShift));
+            animator.SetBool("isRunning", move.magnitude > 0 && Input.GetKey(KeyCode.LeftShift));
+        }
+        else
+        {
+            // Slow down movement while in the air
+            speed *= 0.5f;
+
+            animator.SetBool("isWalking", false);
+            animator.SetBool("isRunning", false);
+        }
+
         controller.Move(move * speed * Time.deltaTime);
     }
 
@@ -162,7 +216,7 @@ public class PlayerController : MonoBehaviour
 
     private bool GetIsGrounded()
     {
-        return Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 1f);
+        return Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 0.95f);
     }
 
     void PerformManchete()
@@ -205,6 +259,31 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    void PerformSpike()
+    {
+        if (!canSpike) return;
+
+        Debug.Log("Spike realizado!");
+
+        if (ball != null)
+        {
+            Rigidbody ballRb = ball.GetComponent<Rigidbody>();
+            if (ballRb != null)
+            {
+                Vector3 spikeDirection = playerCamera.transform.forward + Vector3.down * 0.2f;
+                spikeDirection = spikeDirection.normalized;
+
+                ballRb.linearVelocity = Vector3.zero;
+
+                float hitPower = spikeForce * (hitChargeTime / maxChargeTime + 0.1f);
+
+                ballRb.AddForce(spikeDirection * hitPower, ForceMode.Impulse);
+            }
+        }
+
+        canSpike = false;
+    }
+
 
 
     void HandleCamera()
@@ -229,7 +308,7 @@ public class PlayerController : MonoBehaviour
 
     void SpawnBall()
     {
-        ball = Instantiate(ballPrefab, transform.position + Vector3.up * 10, Quaternion.identity);
+        ball = Instantiate(ballPrefab, transform.position + Vector3.up * 20, Quaternion.identity);
         Debug.Log("Ball spawned!");
     }
 
@@ -242,6 +321,28 @@ public class PlayerController : MonoBehaviour
     public void ClearBall()
     {
         canSet = false;
+        ball = null;
+    }
+    public void BumpBall(GameObject detectedBall)
+    {
+        canBump = true;
+        ball = detectedBall;
+    }
+
+    public void ClearBumpBall()
+    {
+        canBump = false;
+        ball = null;
+    }
+    public void SpikeBall(GameObject detectedBall)
+    {
+        canSpike = true;
+        ball = detectedBall;
+    }
+
+    public void ClearSpikeBall()
+    {
+        canSpike = false;
         ball = null;
     }
 }

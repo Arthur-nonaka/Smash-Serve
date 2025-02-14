@@ -81,26 +81,32 @@ public class VolleyballBall : MonoBehaviour
         if (collision.gameObject.CompareTag("Ground") && !markCreated)
         {
             Vector3 hitPoint = collision.contacts[0].point;
-            CreateMark(hitPoint);
-            markCreated = true;
             Collider courtCollider = GameObject.FindGameObjectWithTag("Court").GetComponent<Collider>();
             if (courtCollider.bounds.Contains(hitPoint))
             {
+                CreateMark(hitPoint, Color.green);
                 Debug.Log("Ball is in the court");
             }
             else
             {
+                CreateMark(hitPoint, Color.red);
                 Debug.Log("Ball is out of the court");
             }
+            markCreated = true;
 
         }
     }
 
-    void CreateMark(Vector3 position)
+    void CreateMark(Vector3 position, Color color)
     {
         if (markPrefab != null)
         {
             GameObject mark = Instantiate(markPrefab, position, Quaternion.identity);
+            Renderer markRenderer = mark.GetComponent<Renderer>();
+            if (markRenderer != null)
+            {
+                markRenderer.material.color = color;
+            }
             StartCoroutine(DestroyMarkAfterTime(mark, 3f));
         }
     }
