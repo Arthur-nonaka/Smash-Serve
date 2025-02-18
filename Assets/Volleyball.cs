@@ -1,12 +1,18 @@
 using UnityEngine;
 using System.Collections;
+using Photon.Pun;
+using Photon.Realtime;
 
-public class VolleyballBall : MonoBehaviour
+public class VolleyballBall : MonoBehaviourPun, IPunObservable
 {
     public float minHitForce = 5f;
     public float maxHitForce = 20f;
     public float gravityScale = 1f;
     public float bounciness = 0.6f;
+
+    public float radius = 0.2f;
+    public float airDensity = 1.2f;
+    public float magnusCoefficient = 0.1f;
 
     private Rigidbody rb;
     private float lastHitTime;
@@ -43,6 +49,11 @@ public class VolleyballBall : MonoBehaviour
         UpdateShadow();
     }
 
+    void FixedUpdate()
+    {
+        ApplyMagnusEffect();
+    }
+
     void UpdateShadow()
     {
         if (shadow == null) return;
@@ -60,6 +71,18 @@ public class VolleyballBall : MonoBehaviour
 
         float scale = Mathf.Lerp(minShadowSize, maxShadowSize, height / maxHeight);
         shadowTransform.localScale = new Vector3(scale, scale, 1);
+    }
+
+    void ApplyMagnusEffect()
+    {
+        Vector3 velocity = rb.linearVelocity;
+        Vector3 angularVelocity = rb.angularVelocity;
+
+        // Calculate the Magnus force
+        Vector3 magnusForce = magnusCoefficient * airDensity * Mathf.PI * Mathf.Pow(radius, 3) * Vector3.Cross(angularVelocity, velocity);
+
+        // Apply the Magnus force
+        rb.AddForce(magnusForce);
     }
 
     // public void HitBall(Vector3 direction, float chargeTime, float maxChargeTime)
@@ -117,5 +140,25 @@ public class VolleyballBall : MonoBehaviour
         yield return new WaitForSeconds(delay);
         Destroy(mark);
         Destroy(gameObject);
+    }
+
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            // Send data to other players
+            stream.SendNext(rb.position);
+            stream.SendNext(rb.rotation);
+            stream.SendNext(rb.linearVelocity);
+            stream.SendNext(rb.angularVelocity);
+        }
+        else
+        {
+            // Receive data from other players
+            rb.position = (Vector3)stream.ReceiveNext();
+            rb.rotation = (Quaternion)stream.ReceiveNext();
+            rb.linearVelocity = (Vector3)stream.ReceiveNext();
+            rb.angularVelocity = (Vector3)stream.ReceiveNext();
+        }
     }
 }

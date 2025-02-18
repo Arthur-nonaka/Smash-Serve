@@ -146,6 +146,9 @@ MonoBehaviour:
   maxHitForce: 20
   gravityScale: 1
   bounciness: 0.6
+  radius: 0.2
+  airDensity: 1.2
+  magnusCoefficient: 0.1
   shadowPrefab: {fileID: 3991532740629627964, guid: 2003686fe9288cb4b9f846863c7e469c, type: 3}
   markPrefab: {fileID: 2017962444201221932, guid: 0bc5650aec1869f41a8c981da712ee7a, type: 3}
 --- !u!135 &-7566120071941418290

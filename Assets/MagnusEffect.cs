@@ -3,8 +3,8 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class MagnusEffect : MonoBehaviour
 {
-    public float radius = 0.5f;
-    public float airDensity = 0.1f;
+    public float radius = 0.2f;
+    public float airDensity = 1.2f;
 
     private Rigidbody rb;
 
@@ -15,8 +15,11 @@ public class MagnusEffect : MonoBehaviour
 
     void FixedUpdate()
     {
-        var direction = Vector3.Cross(rb.angularVelocity, rb.velocity);
-        var magnitude = 4 / 3f * Mathf.PI * airDensity * Mathf.Pow(radius, 3);
-        rb.AddForce(magnitude * direction);
+        Vector3 velocity = rb.linearVelocity;
+        Vector3 angularVelocity = rb.angularVelocity;
+
+        Vector3 magnusForce = airDensity * Mathf.PI * Mathf.Pow(radius, 3) * Vector3.Cross(angularVelocity, velocity);
+
+        rb.AddForce(magnusForce);
     }
 }

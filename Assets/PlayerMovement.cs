@@ -1,7 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
+using System;
+using Photon.Pun;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : MonoBehaviourPun
 {
     public CharacterController controller;
     public Camera playerCamera;
@@ -24,6 +27,7 @@ public class PlayerController : MonoBehaviour
     public float maxChargeTime = 0.001f;
     public float mouseSensitivity = 2f;
     public float delayTime = 0.2f;
+    public float durationOnAir = 0.7f;
     public GameObject ballPrefab;
     public Slider powerSlider;
     public Slider jumpSlider;
@@ -55,11 +59,30 @@ public class PlayerController : MonoBehaviour
 
 
 
-        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Ball"));
+        int playerLayer = LayerMask.NameToLayer("Player");
+        int ballLayer = LayerMask.NameToLayer("Ball");
+
+        if (playerLayer == -1 || ballLayer == -1)
+        {
+            Debug.LogError("Player or Ball layer not found. Please ensure the layers are correctly set up.");
+        }
+        else
+        {
+            Physics.IgnoreLayerCollision(playerLayer, ballLayer);
+        }
+
+        if (!photonView.IsMine)
+        {
+            // Disable the PlayerController for remote players instead of destroying it
+            enabled = false;
+            playerCamera.gameObject.SetActive(false);
+        }
     }
 
     void Update()
     {
+        if (!photonView.IsMine) return;
+
         HandleMovement();
         HandleJump();
         HandleCamera();
@@ -91,7 +114,8 @@ public class PlayerController : MonoBehaviour
 
             if (Input.GetMouseButtonUp(0)) // Soltar botão esquerdo do mouse para bater
             {
-                StartCoroutine(DelayedHitboxCheck(bumpHitbox, PerformManchete, delayTime));
+                float power = hitChargeTime;
+                StartCoroutine(DelayedHitboxCheck(bumpHitbox, () => PerformManchete(power), delayTime));
                 hitChargeTime = 0f;
 
                 powerSlider.value = 0;
@@ -104,6 +128,7 @@ public class PlayerController : MonoBehaviour
         {
             hitChargeTime += Time.deltaTime * powerChargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
+            animator.SetBool("IsSetting", true);
 
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
             powerSlider.value = powerPercent;
@@ -111,7 +136,10 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.F)) // Set in the direction you're looking
         {
-            StartCoroutine(DelayedHitboxCheck(bumpHitbox, PerformSet(1), delayTime));
+            StartCoroutine(SetAnimatorBoolWithDelay("Front_Set", true, 0.5f));
+            animator.SetBool("IsSetting", false);
+            float power = hitChargeTime;
+            StartCoroutine(DelayedHitboxCheck(setHitbox, () => PerformSet(power, 1), delayTime));
             hitChargeTime = 0f;
 
             powerSlider.value = 0;
@@ -121,6 +149,7 @@ public class PlayerController : MonoBehaviour
         {
             hitChargeTime += Time.deltaTime * powerChargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
+            animator.SetBool("IsSetting", true);
 
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
             powerSlider.value = powerPercent;
@@ -128,11 +157,21 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.R)) // Set in the direction you're looking
         {
-            StartCoroutine(DelayedHitboxCheck(bumpHitbox, PerformSet(-1), delayTime));
+            StartCoroutine(SetAnimatorBoolWithDelay("Back_Set", true, 0.5f));
+            animator.SetBool("IsSetting", false);
+            float power = hitChargeTime;
+            StartCoroutine(DelayedHitboxCheck(setHitbox, () => PerformSet(power, -1), delayTime));
             hitChargeTime = 0f;
 
             powerSlider.value = 0;
         }
+    }
+
+    IEnumerator SetAnimatorBoolWithDelay(string parameter, bool value, float delay)
+    {
+        animator.SetBool(parameter, value);
+        yield return new WaitForSeconds(delay);
+        animator.SetBool(parameter, !value);
     }
 
     void HandleSpike()
@@ -148,7 +187,8 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetMouseButtonUp(0) && !GetIsGrounded())
         {
-            StartCoroutine(DelayedHitboxCheck(bumpHitbox, PerformSpike, delayTime));
+            float power = hitChargeTime;
+            StartCoroutine(DelayedHitboxCheck(spikeHitbox, () => PerformSpike(power), delayTime));
             hitChargeTime = 0f;
 
             powerSlider.value = 0;
@@ -161,24 +201,32 @@ public class PlayerController : MonoBehaviour
         float moveZ = Input.GetAxis("Vertical");
         Vector3 move = transform.right * moveX + transform.forward * moveZ;
 
+        animator.SetFloat("Horizontal", moveX);
+        animator.SetFloat("Vertical", moveZ);
+        animator.SetFloat("Speed", move.sqrMagnitude);
+
+        if (moveZ > 0 && Input.GetKey(KeyCode.LeftShift))
+        {
+            animator.SetFloat("Vertical", moveZ + 1);
+        }
+
         float speed = walkSpeed;
 
         if (GetIsGrounded())
         {
-            speed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
+            speed = (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.LeftShift)) ? runSpeed : walkSpeed;
 
             if (Input.GetMouseButton(1))
             {
                 speed *= 0.5f;
-                animator.SetBool("isPreparingBump", true);
+                animator.SetBool("IsBumping", true);
             }
             else
             {
+                animator.SetBool("IsBumping", false);
                 if (Input.GetKey(KeyCode.Space))
                 {
                     speed *= 0.5f;
-                    animator.SetBool("isWalking", move.magnitude > 0 && !Input.GetKey(KeyCode.LeftShift));
-                    animator.SetBool("isRunning", move.magnitude > 0 && Input.GetKey(KeyCode.LeftShift));
                 }
             }
 
@@ -186,10 +234,7 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            // Slow down movement while in the air
             speed *= 0.5f;
-            animator.SetBool("isWalking", false);
-            animator.SetBool("isRunning", false);
         }
 
         controller.Move(move * speed * Time.deltaTime);
@@ -199,12 +244,14 @@ public class PlayerController : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.Space) && GetIsGrounded() && !stopJump)
         {
+            animator.SetBool("IsApproach", true);
             if (chargeTimeReverse > 0)
             {
                 chargeTime -= chargeTimeReverse;
                 chargeTimeReverse = Time.deltaTime * jumpChargeSpeed;
                 if (chargeTime <= 0)
                 {
+                    animator.SetBool("IsApproach", false);
                     stopJump = true;
                     chargeTime = 0f;
                     chargeTimeReverse = 0f;
@@ -226,6 +273,7 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.Space) && GetIsGrounded())
         {
+            animator.SetBool("IsApproach", false);
             if (!stopJump)
             {
                 float jumpPower = jumpForce * (chargeTime / maxChargeTime + 0.5f);
@@ -237,6 +285,11 @@ public class PlayerController : MonoBehaviour
             stopJump = false;
         }
 
+        if (velocity.y > -1.5f && velocity.y < 0)
+        {
+            velocity.y *= durationOnAir;
+        }
+
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
     }
@@ -246,30 +299,33 @@ public class PlayerController : MonoBehaviour
         return Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 0.95f);
     }
 
-    void PerformManchete()
+    void PerformManchete(float power)
     {
         if (!canBump) return;
 
         Debug.Log("Manchete realizada!");
         if (ball != null)
         {
+            RequestOwnership(ball);
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
-                float hitPower = mancheteForce * (hitChargeTime / maxChargeTime + 0.3f); // Mínimo de 50% da força
+                StartCoroutine(SetAnimatorBoolWithDelay("Bump", true, 0.5f));
+                float hitPower = mancheteForce * (power / maxChargeTime + 0.3f); // Mínimo de 50% da força
                 Vector3 direction = (ball.transform.position - transform.position).normalized + Vector3.up;
                 ballRb.AddForce(direction * hitPower, ForceMode.Impulse);
             }
         }
     }
 
-    void PerformSet(int directionMultiplier)
+    void PerformSet(float power, int directionMultiplier)
     {
         if (!canSet) return;
 
         Debug.Log("Levantamento realizado!");
         if (ball != null)
         {
+            RequestOwnership(ball);
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
@@ -278,7 +334,7 @@ public class PlayerController : MonoBehaviour
                 setDirection.y = Mathf.Abs(setDirection.y) + 0.5f; // Ensure it goes upwards
 
                 // Control power based on charge time
-                float setPower = Mathf.Lerp(setForce * 0.5f, setForce * 2f, hitChargeTime / maxChargeTime);
+                float setPower = Mathf.Lerp(setForce * 0.5f, setForce * 2f, power / maxChargeTime);
 
                 // Apply force
                 ballRb.linearVelocity = setDirection.normalized * setPower;
@@ -286,14 +342,16 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void PerformSpike()
+    void PerformSpike(float power)
     {
         if (!canSpike) return;
 
         Debug.Log("Spike realizado!");
+        Debug.Log(power);
 
         if (ball != null)
         {
+            RequestOwnership(ball);
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
@@ -302,11 +360,11 @@ public class PlayerController : MonoBehaviour
 
                 ballRb.linearVelocity = Vector3.zero;
 
-                float hitPower = spikeForce * (hitChargeTime / maxChargeTime + 0.1f);
+                float hitPower = spikeForce * (power / maxChargeTime + 0.1f);
 
                 ballRb.AddForce(spikeDirection * hitPower, ForceMode.Impulse);
 
-                Vector3 spin = new Vector3(0, 10f, 0); // Ajuste os valores conforme necessário
+                Vector3 spin = playerCamera.transform.right * 25f;
                 ballRb.AddTorque(spin, ForceMode.Impulse);
             }
         }
@@ -324,7 +382,7 @@ public class PlayerController : MonoBehaviour
         transform.Rotate(Vector3.up * mouseX);
 
         verticalRotation -= mouseY;
-        verticalRotation = Mathf.Clamp(verticalRotation, -90f, 90f);
+        verticalRotation = Mathf.Clamp(verticalRotation, -90f, 60f);
         playerCamera.transform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
     }
 
@@ -338,8 +396,8 @@ public class PlayerController : MonoBehaviour
 
     void SpawnBall()
     {
-        ball = Instantiate(ballPrefab, transform.position + Vector3.up * 20, Quaternion.identity);
-        Debug.Log("Ball spawned!");
+        Vector3 spawnPosition = transform.position + Vector3.up * 20;
+        PhotonNetwork.Instantiate(ballPrefab.name, spawnPosition, Quaternion.identity);
     }
 
     IEnumerator DelayedHitboxCheck(GameObject hitbox, Action action, float delay)
@@ -409,5 +467,15 @@ public class PlayerController : MonoBehaviour
     {
         canSpike = false;
         ball = null;
+    }
+
+    void RequestOwnership(GameObject obj)
+    {
+        PhotonView photonView = obj.GetComponent<PhotonView>();
+        if (photonView != null && !photonView.IsMine)
+        {
+            Debug.Log($"Requesting ownership of {obj.name}");
+            photonView.TransferOwnership(PhotonNetwork.LocalPlayer);
+        }
     }
 }
