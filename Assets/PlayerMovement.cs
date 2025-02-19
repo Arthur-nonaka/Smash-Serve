@@ -364,7 +364,7 @@ public class PlayerController : MonoBehaviourPun
 
                 ballRb.AddForce(spikeDirection * hitPower, ForceMode.Impulse);
 
-                Vector3 spin = playerCamera.transform.right * 25f;
+                Vector3 spin = playerCamera.transform.right * 20f;
                 ballRb.AddTorque(spin, ForceMode.Impulse);
             }
         }
