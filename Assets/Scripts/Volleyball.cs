@@ -18,9 +18,9 @@ public class VolleyballBall : MonoBehaviourPun, IPunObservable
     private float lastHitTime;
     private bool markCreated = false;
 
-    public GameObject shadowPrefab;
+    public Sprite shadowSprite;
     private GameObject shadow;
-    private Transform shadowTransform;
+    private SpriteRenderer shadowRenderer;
 
     public GameObject markPrefab;
 
@@ -37,10 +37,20 @@ public class VolleyballBall : MonoBehaviourPun, IPunObservable
         bounceMaterial.bounceCombine = PhysicsMaterialCombine.Maximum;
         GetComponent<SphereCollider>().material = bounceMaterial;
 
-        if (shadowPrefab != null)
+        if (shadowSprite != null)
         {
-            shadow = Instantiate(shadowPrefab, transform.position + Vector3.left * 0.1f, Quaternion.Euler(90, 0, 0), transform);
-            shadowTransform = shadow.transform;
+            shadow = new GameObject("Shadow");
+            shadow.transform.SetParent(transform);
+            shadow.transform.localPosition = new Vector3(0, 0, 0);
+
+            shadowRenderer = shadow.AddComponent<SpriteRenderer>();
+            shadowRenderer.sprite = shadowSprite;
+            shadowRenderer.sortingOrder = -1;
+            shadowRenderer.color = Color.black;
+            Color currentColor = shadowRenderer.color;
+            shadowRenderer.color = new Color(currentColor.r, currentColor.g, currentColor.b, 0.7f);
+
+            shadow.transform.localRotation = Quaternion.Euler(90, 0, 0);
         }
     }
 
@@ -58,19 +68,27 @@ public class VolleyballBall : MonoBehaviourPun, IPunObservable
     {
         if (shadow == null) return;
 
+        int layerMask = ~(
+            LayerMask.GetMask("Ball") |
+            LayerMask.GetMask("Player") |
+            LayerMask.GetMask("Hitbox") |
+            LayerMask.GetMask("Net")
+        );
+
         RaycastHit hit;
-        if (Physics.Raycast(transform.position, Vector3.down, out hit, Mathf.Infinity))
+        if (Physics.Raycast(transform.position, Vector3.down, out hit, Mathf.Infinity, layerMask))
         {
-            shadowTransform.position = hit.point + Vector3.up * 0.01f;
+            shadow.transform.position = hit.point + Vector3.up * 0.05f;
         }
 
         float height = transform.position.y;
-        float maxShadowSize = 0.1f; // Maximum size when ball is near ground
-        float minShadowSize = 0.0001f; // Minimum size when ball is high
-        float maxHeight = 100f; // Maximum considered height
+        float maxShadowSize = 0.4f;
+        float minShadowSize = 0.0001f;
+        float maxHeight = 1000f;
 
         float scale = Mathf.Lerp(minShadowSize, maxShadowSize, height / maxHeight);
-        shadowTransform.localScale = new Vector3(scale, scale, 1);
+        shadow.transform.localScale = new Vector3(scale, scale, 1);
+        shadow.transform.rotation = Quaternion.Euler(90, 0, 0);
     }
 
     void ApplyMagnusEffect()
@@ -78,27 +96,10 @@ public class VolleyballBall : MonoBehaviourPun, IPunObservable
         Vector3 velocity = rb.linearVelocity;
         Vector3 angularVelocity = rb.angularVelocity;
 
-        // Calculate the Magnus force
         Vector3 magnusForce = magnusCoefficient * airDensity * Mathf.PI * Mathf.Pow(radius, 3) * Vector3.Cross(angularVelocity, velocity);
 
-        // Apply the Magnus force
         rb.AddForce(magnusForce);
     }
-
-    // public void HitBall(Vector3 direction, float chargeTime, float maxChargeTime)
-    // {
-    //     float hitPower = Mathf.Lerp(minHitForce, maxHitForce, chargeTime / maxChargeTime);
-    //     rb.linearVelocity = Vector3.zero; // Reset velocity before hitting
-    //     rb.AddForce(direction * hitPower, ForceMode.Impulse);
-    //     lastHitTime = Time.time;
-    // }
-
-    // void AttackBall()
-    // {
-    //     Vector3 attackDirection = transform.forward + Vector3.up * 0.005f;
-    //     HitBall(attackDirection, maxHitForce, maxHitForce);
-    // }
-
     void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag("Ground") && !markCreated)
