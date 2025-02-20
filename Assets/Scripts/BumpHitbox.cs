@@ -1,11 +1,15 @@
 using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
 using Photon.Pun;
 
 public class BumpHitbox : MonoBehaviourPunCallbacks
 {
-    public float minBumpForce = 5f;
-    public float maxBumpForce = 20f;
     public float chargeSpeed = 3.0f;
+
+    public float maxChargeTime = 0.001f;
+
+    private Slider powerSlider;
 
     public float mancheteForce = 3.0f;
     public Transform playerCamera;
@@ -23,31 +27,39 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
 
     void Start()
     {
+
+        powerSlider = GameObject.FindGameObjectWithTag("powerSlider").GetComponent<Slider>();
         hitboxCollider = GetComponent<Collider>();
         hitboxCollider.enabled = false;
     }
 
     void Update()
     {
-        // Start charging when right mouse is held
+
         if (Input.GetMouseButtonDown(1))
         {
             Debug.Log("mouse direito downn");
             isCharging = true;
-            hitChargeTime = minBumpForce;
+            hitChargeTime = 0f;
+
+            float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
+            powerSlider.value = powerPercent;
             hitboxCollider.enabled = true;
         }
-        if (Input.GetMouseButton(0) && isCharging)  // Botão 0, geralmente o botão esquerdo do mouse
+        if (Input.GetMouseButton(0) && isCharging)
         {
             hitChargeTime += Time.deltaTime * chargeSpeed;
-            hitChargeTime = Mathf.Clamp(hitChargeTime, minBumpForce, maxBumpForce);
+            hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
+
+            float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
+            powerSlider.value = powerPercent;
         }
         if (Input.GetMouseButtonUp(1))
         {
             Debug.Log("mouse direito up");
             isCharging = false;
             hitboxCollider.enabled = false;
-            // If no ball entered the hitbox during the charge, you can reset the charge here.
+            powerSlider.value = 0f;
             hitChargeTime = 0f;
         }
     }
@@ -56,7 +68,6 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
     {
         if (other.CompareTag("Ball") && isCharging)
         {
-            // Apply bump force immediately when the ball enters the hitbox
             Rigidbody ballRb = other.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
@@ -73,19 +84,26 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
                 float cameraPitchRadians = cameraPitchDegrees * Mathf.Deg2Rad;
 
 
-                float horizontalReductionFactor = Mathf.Clamp01(1 - Mathf.Abs(Mathf.Sin(cameraPitchRadians)));
+                float horizontalReductionFactor = Mathf.Clamp01(1 - 0.4f * Mathf.Pow(Mathf.Sin(cameraPitchRadians), 2));
 
                 horizontalDirection *= horizontalReductionFactor;
 
-                float verticalForce = 10f;
+                float verticalForce = 4f;
 
                 Vector3 bumpDirection = horizontalDirection + Vector3.up * verticalForce;
 
                 StartCoroutine(animationController.SetAnimatorBoolWithDelay("Bump", true, 0.5f));
 
-                float hitPower = mancheteForce * (hitChargeTime + 0.2f);
+                float hitPower = mancheteForce * (hitChargeTime + 1f);
+                ballRb.linearVelocity = Vector3.zero;
+
                 ballRb.AddForce(bumpDirection.normalized * hitPower, ForceMode.Impulse);
                 Debug.Log("Bump performed with force: " + hitChargeTime);
+
+
+                float randomDirection = Random.Range(-0.03f, 0.03f);
+                Vector3 spin = playerCamera.transform.right * 0.08f + playerCamera.transform.forward * randomDirection;
+                ballRb.AddTorque(spin, ForceMode.Impulse);
 
                 hitChargeTime = 0f;
                 isCharging = false;

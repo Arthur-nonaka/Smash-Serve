@@ -84,7 +84,7 @@ public class VolleyballBall : MonoBehaviourPun, IPunObservable
         float height = transform.position.y;
         float maxShadowSize = 0.4f;
         float minShadowSize = 0.0001f;
-        float maxHeight = 1000f;
+        float maxHeight = 200f;
 
         float scale = Mathf.Lerp(minShadowSize, maxShadowSize, height / maxHeight);
         shadow.transform.localScale = new Vector3(scale, scale, 1);

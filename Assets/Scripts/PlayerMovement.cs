@@ -316,7 +316,7 @@ public class PlayerController : MonoBehaviourPun
         float setPower = Mathf.Lerp(setForce * 0.5f, setForce * 2f, power / maxChargeTime);
 
         ballRb.isKinematic = false;
-        ballRb.linearVelocity = setDirection.normalized * setPower;
+        ballRb.AddForce(setDirection.normalized * setPower, ForceMode.Impulse);
     }
 
     void PerformSpike(float power)

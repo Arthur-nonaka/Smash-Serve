@@ -7,6 +7,8 @@ TagManager:
   - Ball
   - Ground
   - Court
+  - powerSlider
+  - jumpSlider
   layers:
   - Default
   - TransparentFX
