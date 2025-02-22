@@ -17,8 +17,7 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
     private float hitChargeTime = 0f;
     private bool isCharging = false;
 
-    // Reference to the ball (set externally)
-    public GameObject ball;
+    private GameObject ball;
 
     public AnimationController animationController;
 
@@ -68,14 +67,12 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
     {
         if (other.CompareTag("Ball") && isCharging)
         {
+            ball = other.gameObject;
             Rigidbody ballRb = other.GetComponent<Rigidbody>();
+            Debug.Log(ball);
+            RequestOwnership(ball);
             if (ballRb != null)
             {
-                PhotonView ballPhotonView = other.GetComponent<PhotonView>();
-                if (ballPhotonView != null && !ballPhotonView.IsMine)
-                {
-                    ballPhotonView.RequestOwnership();
-                }
                 Vector3 cameraForward = playerCamera.transform.forward;
 
                 Vector3 horizontalDirection = new Vector3(cameraForward.x, 0, cameraForward.z).normalized;
@@ -88,27 +85,54 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
 
                 horizontalDirection *= horizontalReductionFactor;
 
-                float verticalForce = 4f;
+                float verticalForce = 5f;
 
                 Vector3 bumpDirection = horizontalDirection + Vector3.up * verticalForce;
 
                 StartCoroutine(animationController.SetAnimatorBoolWithDelay("Bump", true, 0.5f));
 
-                float hitPower = mancheteForce * (hitChargeTime + 1f);
-                ballRb.linearVelocity = Vector3.zero;
-
-                ballRb.AddForce(bumpDirection.normalized * hitPower, ForceMode.Impulse);
-                Debug.Log("Bump performed with force: " + hitChargeTime);
-
+                float hitPower = mancheteForce * (hitChargeTime + 2f);
 
                 float randomDirection = Random.Range(-0.03f, 0.03f);
                 Vector3 spin = playerCamera.transform.right * 0.08f + playerCamera.transform.forward * randomDirection;
-                ballRb.AddTorque(spin, ForceMode.Impulse);
+
+                StartCoroutine(WaitForOwnershipAndBump(ballRb, bumpDirection, hitPower, spin));
 
                 hitChargeTime = 0f;
                 isCharging = false;
                 hitboxCollider.enabled = false;
             }
+        }
+    }
+
+    IEnumerator WaitForOwnershipAndBump(Rigidbody ballRb, Vector3 bumpDirection, float hitPower, Vector3 spin)
+    {
+        ballRb.isKinematic = true;
+
+        while (!ball.GetComponent<PhotonView>().IsMine)
+        {
+            yield return null;
+        }
+
+        ball.transform.position += Vector3.up * 0.2f;
+
+        ballRb.isKinematic = false;
+        ballRb.linearVelocity = Vector3.zero;
+        ballRb.angularVelocity = Vector3.zero;
+        ballRb.AddForce(bumpDirection * hitPower, ForceMode.Impulse);
+        ballRb.AddTorque(spin, ForceMode.Impulse);
+
+        // photonView.RPC("SyncBallState", RpcTarget.Others, ball.transform.position, ballRb.linearVelocity, ballRb.angularVelocity);
+    }
+
+
+    void RequestOwnership(GameObject obj)
+    {
+        PhotonView photonView = obj.GetComponent<PhotonView>();
+        if (photonView != null && !photonView.IsMine)
+        {
+            Debug.Log($"Requesting ownership of {obj.name}");
+            photonView.TransferOwnership(PhotonNetwork.LocalPlayer);
         }
     }
 }

@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System.Collections;
 using System;
 using Photon.Pun;
+using Photon.Realtime;
 
 public class PlayerController : MonoBehaviourPun
 {
@@ -323,30 +324,36 @@ public class PlayerController : MonoBehaviourPun
     {
         if (!canSpike) return;
 
-        Debug.Log("Spike realizado!");
-        Debug.Log(power);
-
         if (ball != null)
         {
             RequestOwnership(ball);
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
-                Vector3 spikeDirection = playerCamera.transform.forward + Vector3.down * 0.2f;
-                spikeDirection = spikeDirection.normalized;
-
-                ballRb.linearVelocity = Vector3.zero;
-
+                Vector3 spikeDirection = (playerCamera.transform.forward + Vector3.down * 0.2f).normalized;
                 float hitPower = spikeForce * (power / maxChargeTime + 0.1f);
-
-                ballRb.AddForce(spikeDirection * hitPower, ForceMode.Impulse);
-
                 Vector3 spin = playerCamera.transform.right * 20f;
-                ballRb.AddTorque(spin, ForceMode.Impulse);
+
+                StartCoroutine(WaitForOwnershipAndSpike(ballRb, spikeDirection, hitPower, spin));
+                Debug.Log("Spike attempted, waiting for ownership...");
             }
         }
-
         canSpike = false;
+    }
+
+    IEnumerator WaitForOwnershipAndSpike(Rigidbody ballRb, Vector3 spikeDirection, float hitPower, Vector3 spin)
+    {
+        while (!ball.GetComponent<PhotonView>().IsMine)
+        {
+            yield return null;
+        }
+
+        ballRb.linearVelocity = Vector3.zero;
+        ballRb.angularVelocity = Vector3.zero;
+        ballRb.AddForce(spikeDirection * hitPower, ForceMode.Impulse);
+        ballRb.AddTorque(spin, ForceMode.Impulse);
+
+        photonView.RPC("SyncBallState", RpcTarget.Others, ball.transform.position, ballRb.linearVelocity, ballRb.angularVelocity);
     }
 
 
@@ -443,6 +450,21 @@ public class PlayerController : MonoBehaviourPun
         {
             Debug.Log($"Requesting ownership of {obj.name}");
             photonView.TransferOwnership(PhotonNetwork.LocalPlayer);
+        }
+    }
+
+    [PunRPC]
+    void SyncBallState(Vector3 position, Vector3 velocity, Vector3 angularVelocity)
+    {
+        if (ball != null)
+        {
+            Rigidbody ballRb = ball.GetComponent<Rigidbody>();
+            if (ballRb != null)
+            {
+                ball.transform.position = position;
+                ballRb.linearVelocity = velocity;
+                ballRb.angularVelocity = angularVelocity;
+            }
         }
     }
 }

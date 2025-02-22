@@ -11,8 +11,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public Transform spawnPoints;
     void Start()
     {
-        PhotonNetwork.SendRate = 60;
-        PhotonNetwork.SerializationRate = 60;
+        PhotonNetwork.SendRate = 40;
+        PhotonNetwork.SerializationRate = 20;
 
         Debug.Log("Creating or joining room...");
 

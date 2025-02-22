@@ -1,9 +1,11 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
+using System;
 using Photon.Pun;
 using Photon.Realtime;
 
-public class VolleyballBall : MonoBehaviourPun, IPunObservable
+public class VolleyballBall : MonoBehaviourPunCallbacks
 {
     public float minHitForce = 5f;
     public float maxHitForce = 20f;
