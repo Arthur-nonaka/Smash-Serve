@@ -295,7 +295,13 @@ public class PlayerController : MonoBehaviourPun
 
         while (elapsedTime < duration)
         {
-            ball.transform.position = Vector3.Lerp(startPosition, midpoint, elapsedTime / duration);
+            Vector3 currentHandMidpoint = (handPositionL.position + handPositionR.position) / 2;
+            // Optionally, add an offset if needed (for example, to move it slightly backward)
+            Vector3 targetPosition = currentHandMidpoint + Vector3.back * 0.15f;
+
+            // Smoothly move the ball toward the current target
+            ball.transform.position = Vector3.Lerp(ball.transform.position, targetPosition, Time.deltaTime * 10f);
+
             elapsedTime += Time.deltaTime;
             yield return null;
         }
@@ -308,16 +314,18 @@ public class PlayerController : MonoBehaviourPun
             StartCoroutine(animationController.SetAnimatorBoolWithDelay("Back_Set", true, 0.5f));
         }
 
-        ball.transform.position = midpoint;
+        // ball.transform.position = midpoint;
 
-        yield return new WaitForSeconds(0.005f);
+        // yield return new WaitForSeconds(0.005f);
 
         Vector3 setDirection = playerCamera.transform.forward * directionMultiplier;
         setDirection.y = Mathf.Abs(setDirection.y) + 0.5f;
         float setPower = Mathf.Lerp(setForce * 0.5f, setForce * 2f, power / maxChargeTime);
 
         ballRb.isKinematic = false;
+        yield return null;
         ballRb.AddForce(setDirection.normalized * setPower, ForceMode.Impulse);
+        photonView.RPC("SyncBallState", RpcTarget.Others, ball.transform.position, ballRb.linearVelocity, ballRb.angularVelocity);
     }
 
     void PerformSpike(float power)
