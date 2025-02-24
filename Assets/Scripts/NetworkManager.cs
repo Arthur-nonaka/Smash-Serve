@@ -12,7 +12,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     void Start()
     {
         PhotonNetwork.SendRate = 40;
-        PhotonNetwork.SerializationRate = 20;
+        PhotonNetwork.SerializationRate = 40;
 
         Debug.Log("Creating or joining room...");
 

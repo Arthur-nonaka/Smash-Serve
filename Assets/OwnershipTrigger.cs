@@ -19,6 +19,7 @@ public class OwnershipTrigger : MonoBehaviour
         PhotonView photonView = obj.GetComponent<PhotonView>();
         if (photonView != null && !photonView.IsMine)
         {
+            Debug.Log("not owner");
             Debug.Log($"Requesting ownership of {obj.name}");
             photonView.TransferOwnership(PhotonNetwork.LocalPlayer);
         }

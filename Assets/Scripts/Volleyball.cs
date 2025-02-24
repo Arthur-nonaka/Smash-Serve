@@ -149,7 +149,6 @@ public class VolleyballBall : MonoBehaviourPunCallbacks
     {
         if (stream.IsWriting)
         {
-            // Send data to other players
             stream.SendNext(rb.position);
             stream.SendNext(rb.rotation);
             stream.SendNext(rb.linearVelocity);
@@ -157,7 +156,6 @@ public class VolleyballBall : MonoBehaviourPunCallbacks
         }
         else
         {
-            // Receive data from other players
             rb.position = (Vector3)stream.ReceiveNext();
             rb.rotation = (Quaternion)stream.ReceiveNext();
             rb.linearVelocity = (Vector3)stream.ReceiveNext();

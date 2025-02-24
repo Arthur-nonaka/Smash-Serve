@@ -23,17 +23,22 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
 
 
     private Collider hitboxCollider;
+    private Collider ownershipHitboxCollider;
 
     void Start()
     {
 
         powerSlider = GameObject.FindGameObjectWithTag("powerSlider").GetComponent<Slider>();
+        ownershipHitboxCollider = transform.Find("Hitbox-Bump-Ownership").GetComponent<Collider>();
         hitboxCollider = GetComponent<Collider>();
         hitboxCollider.enabled = false;
+        ownershipHitboxCollider.enabled = false;
     }
 
     void Update()
     {
+
+        if (!photonView.IsMine) return;
 
         if (Input.GetMouseButtonDown(1))
         {
@@ -44,6 +49,7 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
             powerSlider.value = powerPercent;
             hitboxCollider.enabled = true;
+            ownershipHitboxCollider.enabled = true;
         }
         if (Input.GetMouseButton(0) && isCharging)
         {
@@ -58,18 +64,18 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
             Debug.Log("mouse direito up");
             isCharging = false;
             hitboxCollider.enabled = false;
+            ownershipHitboxCollider.enabled = false;
             powerSlider.value = 0f;
             hitChargeTime = 0f;
         }
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         if (other.CompareTag("Ball") && isCharging)
         {
             ball = other.gameObject;
             Rigidbody ballRb = other.GetComponent<Rigidbody>();
-            Debug.Log(ball);
             RequestOwnership(ball);
             if (ballRb != null)
             {
@@ -101,22 +107,19 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
                 hitChargeTime = 0f;
                 isCharging = false;
                 hitboxCollider.enabled = false;
+                ownershipHitboxCollider.enabled = false;
             }
         }
     }
 
     IEnumerator WaitForOwnershipAndBump(Rigidbody ballRb, Vector3 bumpDirection, float hitPower, Vector3 spin)
     {
-        ballRb.isKinematic = true;
 
         while (!ball.GetComponent<PhotonView>().IsMine)
         {
             yield return null;
         }
 
-        ball.transform.position += Vector3.up * 0.2f;
-
-        ballRb.isKinematic = false;
         ballRb.linearVelocity = Vector3.zero;
         ballRb.angularVelocity = Vector3.zero;
         ballRb.AddForce(bumpDirection * hitPower, ForceMode.Impulse);
@@ -133,6 +136,21 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
         {
             Debug.Log($"Requesting ownership of {obj.name}");
             photonView.TransferOwnership(PhotonNetwork.LocalPlayer);
+        }
+    }
+
+    [PunRPC]
+    void SyncBallState(Vector3 position, Vector3 velocity, Vector3 angularVelocity)
+    {
+        if (ball != null)
+        {
+            Rigidbody ballRb = ball.GetComponent<Rigidbody>();
+            if (ballRb != null)
+            {
+                ball.transform.position = position;
+                ballRb.linearVelocity = velocity;
+                ballRb.angularVelocity = angularVelocity;
+            }
         }
     }
 }

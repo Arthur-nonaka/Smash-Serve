@@ -285,11 +285,11 @@ public class PlayerController : MonoBehaviourPun
     {
 
         Vector3 startPosition = ball.transform.position;
+        float duration = 0.16f;
+        float elapsedTime = 0f;
         Vector3 handMidPoint = (handPositionL.position + handPositionR.position) / 2;
         Vector3 midpoint = new Vector3(handMidPoint.x, transform.position.y * -7.1f, handMidPoint.z);
         midpoint += Vector3.back * 0.15f;
-        float duration = 0.16f;
-        float elapsedTime = 0f;
 
         ballRb.isKinematic = true;
 

@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 762768816328621989}
   - component: {fileID: 2180372748509042444}
+  - component: {fileID: 123431314494661253}
   m_Layer: 9
   m_Name: Hitbox-Bump-Ownership
   m_TagString: Untagged
@@ -25,13 +26,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 965601505422743021}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.012, y: -0.55, z: 0.046}
-  m_LocalScale: {x: 1.3556, y: 2.6327612, z: 1.1441}
+  m_LocalRotation: {x: -0.2223872, y: 0.008858626, z: -0.032853678, w: 0.9743645}
+  m_LocalPosition: {x: -0.028, y: -1.38, z: 0.109}
+  m_LocalScale: {x: 0.8363239, y: 1.2717274, z: 0.9283456}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7681359476430595351}
-  m_LocalEulerAnglesHint: {x: -33.745, y: -169.885, z: 172.06}
+  m_LocalEulerAnglesHint: {x: -154.355, y: -177.974, z: 175.676}
 --- !u!64 &2180372748509042444
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -54,6 +55,18 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &123431314494661253
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 965601505422743021}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0df9a7d9eb2ee7648b669f6f6bfe2984, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &2068814636127492454
 PrefabInstance:
   m_ObjectHideFlags: 0
