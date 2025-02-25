@@ -8,13 +8,14 @@ using Photon.Realtime;
 public class PlayerController : MonoBehaviourPun
 {
     public CharacterController controller;
-    public Camera playerCamera;
+    public Transform playerCamera;
 
     public Animator animator;
     public AnimationController animationController;
 
     public GameObject setHitbox;
     public GameObject spikeHitbox;
+    public GameObject blockHitbox;
     public float walkSpeed = 5f;
     public float runSpeed = 10f;
     public float gravity = -9.81f;
@@ -27,7 +28,6 @@ public class PlayerController : MonoBehaviourPun
     public float powerChargeSpeed = 3.0f;
     public float spikeForce = 10f;
     public float maxChargeTime = 0.001f;
-    public float mouseSensitivity = 2f;
     public float delayTime = 0.2f;
     public float durationOnAir = 0.7f;
     public GameObject ballPrefab;
@@ -38,16 +38,42 @@ public class PlayerController : MonoBehaviourPun
     private float chargeTime = 0f;
     private float chargeTimeReverse = 0f;
     private float hitChargeTime = 0f;
-    private float verticalRotation = 0f;
     private GameObject ball;
     private bool canSet = false;
     private bool canSpike = false;
     private bool stopJump = false;
 
+    private Quaternion lockedRotation;
+    private Vector3 lockedHorizontalVelocity = Vector3.zero;
+    private Vector3 horizontalVelocity = Vector3.zero;
+    public float airAcceleration = 2f;
+    public float airControlFactor = 0.3f;
+
+    public float attackMouseSlowFactor = 0.5f;
+
+    private bool isAttacking = false;
+    public float cameraLerpSpeed = 5f;
+
+    private bool wasGrounded = false;
+
+    [Header("Sensitivity & Rotation")]
+    public float mouseSensitivity = 2f;
+    public float verticalRotation = 0f;
+    private float cameraYaw = 0f;
+
+    [Header("Attack Joystick Settings")]
+    public float joystickMaxOffset = 50f;
+    public float joystickDeadzone = 2f;
+    public float joystickMaxRotationSpeed = 90f;
+    private VirtualJoystickUI virtualJoystickUI;
+    private Vector2 virtualMousePos;
+
 
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
+        virtualMousePos = Vector2.zero;
+        virtualJoystickUI = FindObjectOfType<VirtualJoystickUI>();
         int playerLayer = LayerMask.NameToLayer("Player");
         int ballLayer = LayerMask.NameToLayer("Ball");
 
@@ -62,7 +88,6 @@ public class PlayerController : MonoBehaviourPun
 
         if (!photonView.IsMine)
         {
-            // Disable the PlayerController for remote players instead of destroying it
             enabled = false;
             playerCamera.gameObject.SetActive(false);
         }
@@ -90,11 +115,20 @@ public class PlayerController : MonoBehaviourPun
         HandleCamera();
         HandleBallInteraction();
         HandleSpike();
+        HandleBlock();
 
+        float currentY = transform.position.y;
+        animator.SetFloat("Height", currentY);
 
-        // Levantamento para frente
-        if (Input.GetKey(KeyCode.F)) // Charge the set
+        if (Input.GetKeyDown(KeyCode.V))
         {
+            InstantiateVolleyballTowardsPlayer();
+        }
+
+
+        if (Input.GetKey(KeyCode.F) && !Input.GetKey(KeyCode.R))
+        {
+
             hitChargeTime += Time.deltaTime * powerChargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
             animator.SetBool("IsSetting", true);
@@ -103,9 +137,9 @@ public class PlayerController : MonoBehaviourPun
             powerSlider.value = powerPercent;
         }
 
-        if (Input.GetKeyUp(KeyCode.F)) // Set in the direction you're looking
+        if (Input.GetKeyUp(KeyCode.F))
         {
-            animator.SetBool("IsSetting", false);
+            StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsSetting", true, 0.6f));
             float power = hitChargeTime;
             StartCoroutine(DelayedHitboxCheck(setHitbox, () => PerformSet(power, 1), delayTime));
             hitChargeTime = 0f;
@@ -113,7 +147,7 @@ public class PlayerController : MonoBehaviourPun
             powerSlider.value = 0;
         }
 
-        if (Input.GetKey(KeyCode.R)) // Charge the set
+        if (Input.GetKey(KeyCode.R) && !Input.GetKey(KeyCode.F))
         {
             hitChargeTime += Time.deltaTime * powerChargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
@@ -123,9 +157,9 @@ public class PlayerController : MonoBehaviourPun
             powerSlider.value = powerPercent;
         }
 
-        if (Input.GetKeyUp(KeyCode.R)) // Set in the direction you're looking
+        if (Input.GetKeyUp(KeyCode.R))
         {
-            animator.SetBool("IsSetting", false);
+            StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsSetting", true, 0.6f));
             float power = hitChargeTime;
             StartCoroutine(DelayedHitboxCheck(setHitbox, () => PerformSet(power, -1), delayTime));
             hitChargeTime = 0f;
@@ -141,15 +175,44 @@ public class PlayerController : MonoBehaviourPun
         animator.SetBool(parameter, !value);
     }
 
+    void InstantiateVolleyballTowardsPlayer()
+    {
+        Vector3 spawnPosition = transform.position + transform.forward * 10f + Vector3.up * 7f;
+        GameObject volleyball = PhotonNetwork.Instantiate(ballPrefab.name, spawnPosition, Quaternion.identity);
+        Rigidbody volleyballRb = volleyball.GetComponent<Rigidbody>();
+        if (volleyballRb != null)
+        {
+            Vector3 directionToPlayer = (transform.position - spawnPosition).normalized;
+            volleyballRb.AddForce(directionToPlayer * 23f + Vector3.up * 8.5f, ForceMode.Impulse); // Adjust the force as needed
+        }
+    }
+
+    void HandleBlock()
+    {
+        if (Input.GetMouseButton(1) && !GetIsGrounded() && !Input.GetMouseButton(0))
+        {
+            animator.SetBool("IsBlocking", true);
+            blockHitbox.SetActive(true);
+
+        }
+        else
+        {
+            animator.SetBool("IsBlocking", false);
+            blockHitbox.SetActive(false);
+        }
+    }
+
     void HandleSpike()
     {
-        if (Input.GetMouseButton(0) && !GetIsGrounded())
+        if (Input.GetMouseButton(0) && !GetIsGrounded() && !Input.GetMouseButton(1))
         {
+            StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsSpiking", true, 1.5f));
             hitChargeTime += Time.deltaTime * powerChargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
 
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
             powerSlider.value = powerPercent;
+            isAttacking = true;
         }
 
         if (Input.GetMouseButtonUp(0) && !GetIsGrounded())
@@ -159,6 +222,17 @@ public class PlayerController : MonoBehaviourPun
             hitChargeTime = 0f;
 
             powerSlider.value = 0;
+            isAttacking = false;
+            virtualMousePos = Vector2.zero;
+        }
+
+        if (Input.GetMouseButtonUp(0) && GetIsGrounded())
+        {
+            hitChargeTime = 0f;
+
+            powerSlider.value = 0;
+            isAttacking = false;
+            virtualMousePos = Vector2.zero;
         }
     }
 
@@ -166,23 +240,23 @@ public class PlayerController : MonoBehaviourPun
     {
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
-        Vector3 move = transform.right * moveX + transform.forward * moveZ;
+        Vector3 inputVector = new Vector3(moveX, 0, moveZ);
+        Vector3 worldInput = (transform.right * moveX + transform.forward * moveZ).normalized;
 
         animator.SetFloat("Horizontal", moveX);
         animator.SetFloat("Vertical", moveZ);
-        animator.SetFloat("Speed", move.sqrMagnitude);
-
+        animator.SetFloat("Speed", inputVector.sqrMagnitude);
         if (moveZ > 0 && Input.GetKey(KeyCode.LeftShift))
         {
             animator.SetFloat("Vertical", moveZ + 1);
         }
 
         float speed = walkSpeed;
+        Vector3 finalMove;
 
         if (GetIsGrounded())
         {
-            speed = (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.LeftShift)) ? runSpeed : walkSpeed;
-
+            speed = (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.Space)) ? runSpeed : walkSpeed;
             if (Input.GetMouseButton(1))
             {
                 speed *= 0.5f;
@@ -197,18 +271,24 @@ public class PlayerController : MonoBehaviourPun
                 }
             }
 
-
+            lockedHorizontalVelocity = worldInput * speed;
+            horizontalVelocity = lockedHorizontalVelocity;
+            finalMove = horizontalVelocity;
         }
         else
         {
-            speed *= 0.5f;
+            Vector3 targetVelocity = lockedHorizontalVelocity + (worldInput * walkSpeed * airControlFactor);
+            horizontalVelocity = Vector3.Lerp(horizontalVelocity, targetVelocity, airAcceleration * Time.deltaTime);
+            horizontalVelocity = Vector3.ClampMagnitude(horizontalVelocity, walkSpeed);
+            finalMove = horizontalVelocity;
         }
 
-        controller.Move(move * speed * Time.deltaTime);
+        controller.Move(finalMove * Time.deltaTime);
     }
 
     void HandleJump()
     {
+
         if (Input.GetKey(KeyCode.Space) && GetIsGrounded() && !stopJump)
         {
             animator.SetBool("IsApproach", true);
@@ -240,15 +320,17 @@ public class PlayerController : MonoBehaviourPun
 
         if (Input.GetKeyUp(KeyCode.Space) && GetIsGrounded())
         {
-            animator.SetBool("IsApproach", false);
             if (!stopJump)
             {
+                StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsJumping", true, 0.5f));
                 float jumpPower = jumpForce * (chargeTime / maxChargeTime + 0.5f);
                 velocity.y = Mathf.Sqrt(jumpPower * -2f * gravity);
                 chargeTime = 0f;
                 chargeTimeReverse = 0f;
                 jumpSlider.value = 0;
+                wasGrounded = false;
             }
+            animator.SetBool("IsApproach", false);
             stopJump = false;
         }
 
@@ -257,8 +339,9 @@ public class PlayerController : MonoBehaviourPun
             velocity.y *= durationOnAir;
         }
 
+
         velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+        controller.Move(new Vector3(0, velocity.y, 0) * Time.deltaTime);
     }
 
     private bool GetIsGrounded()
@@ -283,7 +366,6 @@ public class PlayerController : MonoBehaviourPun
 
     IEnumerator HoldAndSetBall(Rigidbody ballRb, float power, int directionMultiplier)
     {
-
         Vector3 startPosition = ball.transform.position;
         float duration = 0.16f;
         float elapsedTime = 0f;
@@ -296,10 +378,8 @@ public class PlayerController : MonoBehaviourPun
         while (elapsedTime < duration)
         {
             Vector3 currentHandMidpoint = (handPositionL.position + handPositionR.position) / 2;
-            // Optionally, add an offset if needed (for example, to move it slightly backward)
             Vector3 targetPosition = currentHandMidpoint + Vector3.back * 0.15f;
 
-            // Smoothly move the ball toward the current target
             ball.transform.position = Vector3.Lerp(ball.transform.position, targetPosition, Time.deltaTime * 10f);
 
             elapsedTime += Time.deltaTime;
@@ -313,6 +393,8 @@ public class PlayerController : MonoBehaviourPun
         {
             StartCoroutine(animationController.SetAnimatorBoolWithDelay("Back_Set", true, 0.5f));
         }
+
+        animator.SetBool("IsSetting", false);
 
         // ball.transform.position = midpoint;
 
@@ -347,6 +429,8 @@ public class PlayerController : MonoBehaviourPun
             }
         }
         canSpike = false;
+        isAttacking = false;
+        virtualMousePos = Vector2.zero;
     }
 
     IEnumerator WaitForOwnershipAndSpike(Rigidbody ballRb, Vector3 spikeDirection, float hitPower, Vector3 spin)
@@ -355,6 +439,9 @@ public class PlayerController : MonoBehaviourPun
         {
             yield return null;
         }
+
+        StartCoroutine(animationController.SetAnimatorBoolWithDelay("Spiked", true, 0.5f));
+        animator.SetBool("IsSpiking", false);
 
         ballRb.linearVelocity = Vector3.zero;
         ballRb.angularVelocity = Vector3.zero;
@@ -371,11 +458,60 @@ public class PlayerController : MonoBehaviourPun
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        transform.Rotate(Vector3.up * mouseX);
-
         verticalRotation -= mouseY;
-        verticalRotation = Mathf.Clamp(verticalRotation, -90f, 70f);
-        playerCamera.transform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+        verticalRotation = Mathf.Clamp(verticalRotation, -90f, 60f);
+
+        if (isAttacking)
+        {
+            if (Mathf.Abs(mouseX) < 0.01f)
+            {
+                float returnSpeed = 5f;
+                virtualMousePos.x = Mathf.Lerp(virtualMousePos.x, 0f, Time.deltaTime * returnSpeed);
+            }
+            else
+            {
+                virtualMousePos.x += mouseX;
+            }
+            virtualMousePos.x = Mathf.Clamp(virtualMousePos.x, -joystickMaxOffset, joystickMaxOffset);
+            if (Mathf.Abs(virtualMousePos.x) < joystickDeadzone)
+                virtualMousePos.x = 0f;
+
+            if (virtualJoystickUI != null)
+            {
+                virtualJoystickUI.virtualJoystickOffsetX = virtualMousePos.x;
+            }
+
+            float normalizedHorizontal = virtualMousePos.x / joystickMaxOffset;
+            float rotationDeltaX = normalizedHorizontal * joystickMaxRotationSpeed * Time.deltaTime;
+            transform.Rotate(Vector3.up * rotationDeltaX);
+            playerCamera.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+        }
+        else
+        {
+            virtualMousePos.x = 0f;
+            cameraYaw += mouseX;
+
+            if (GetIsGrounded())
+            {
+                if (!wasGrounded)
+                {
+                    // transform.rotation = Quaternion.Euler(0f, cameraYaw, 0f);
+                }
+                else
+                {
+                    transform.Rotate(Vector3.up * mouseX);
+                }
+
+                playerCamera.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+            }
+            else
+            {
+                transform.Rotate(Vector3.up * mouseX);
+                playerCamera.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+            }
+        }
+
+        wasGrounded = GetIsGrounded();
     }
 
     void HandleBallInteraction()
