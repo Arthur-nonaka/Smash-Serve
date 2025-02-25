@@ -73,7 +73,7 @@ public class PlayerController : MonoBehaviourPun
     {
         Cursor.lockState = CursorLockMode.Locked;
         virtualMousePos = Vector2.zero;
-        virtualJoystickUI = FindObjectOfType<VirtualJoystickUI>();
+        virtualJoystickUI = FindAnyObjectByType<VirtualJoystickUI>();
         int playerLayer = LayerMask.NameToLayer("Player");
         int ballLayer = LayerMask.NameToLayer("Ball");
 
@@ -226,7 +226,7 @@ public class PlayerController : MonoBehaviourPun
             virtualMousePos = Vector2.zero;
         }
 
-        if (Input.GetMouseButtonUp(0) && GetIsGrounded())
+        if (Input.GetMouseButtonUp(0) && GetIsGrounded() && isAttacking)
         {
             hitChargeTime = 0f;
 
@@ -337,7 +337,7 @@ public class PlayerController : MonoBehaviourPun
         controller.Move(new Vector3(0, velocity.y, 0) * Time.deltaTime);
     }
 
-    private bool GetIsGrounded()
+    public bool GetIsGrounded()
     {
         return Physics.Raycast((transform.position + Vector3.up * 1f), Vector3.down, out RaycastHit hit, 0.29f);
     }
@@ -472,6 +472,11 @@ public class PlayerController : MonoBehaviourPun
             if (virtualJoystickUI != null)
             {
                 virtualJoystickUI.virtualJoystickOffsetX = virtualMousePos.x;
+            }
+            else
+            {
+                virtualJoystickUI.virtualJoystickOffsetX = Vector2.zero.x;
+
             }
 
             float normalizedHorizontal = virtualMousePos.x / joystickMaxOffset;

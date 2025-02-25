@@ -277,15 +277,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6265393403100418566, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1
+      value: 1.2917
       objectReference: {fileID: 0}
     - target: {fileID: 6265393403100418566, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: m_LocalScale.y
-      value: 1
+      value: 1.2917
       objectReference: {fileID: 0}
     - target: {fileID: 6265393403100418566, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: m_LocalScale.z
-      value: 1
+      value: 1.2917
       objectReference: {fileID: 0}
     - target: {fileID: 6265393403100418566, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: m_LocalPosition.x
@@ -293,11 +293,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6265393403100418566, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.71303
+      value: -0.89
       objectReference: {fileID: 0}
     - target: {fileID: 6265393403100418566, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.021213
+      value: -0.044547
       objectReference: {fileID: 0}
     - target: {fileID: 6265393403100418566, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: m_LocalRotation.w
@@ -385,11 +385,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6991256729019146416, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: joystickDeadzone
-      value: 1
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: 6991256729019146416, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: joystickMaxOffset
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 6991256729019146416, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: animationController
@@ -397,7 +397,7 @@ PrefabInstance:
       objectReference: {fileID: 6542588359314436960}
     - target: {fileID: 6991256729019146416, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: joystickMaxRotationSpeed
-      value: 90
+      value: 70
       objectReference: {fileID: 0}
     - target: {fileID: 7574313719069592594, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: m_Name
@@ -517,6 +517,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 8072884329112350155, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
+    - {fileID: 7626072028370362661, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 6265393403100418566, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
@@ -538,6 +539,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4445657279838821584, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7541337201555804904}
+    - targetCorrespondingSourceObject: {fileID: 4445657279838821584, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7714308161544622392}
   m_SourcePrefab: {fileID: 100100000, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
 --- !u!4 &2050153043212397920 stripped
 Transform:
@@ -571,6 +575,23 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &7714308161544622392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2380084571462829494}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc7d151f6918cbf43be0aabb105d7859, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  chargeSpeed: 3
+  maxChargeTime: 2
+  mancheteForce: 0.5
+  playerCamera: {fileID: 2050153043212397920}
+  animationController: {fileID: 6542588359314436960}
 --- !u!4 &2737859660780245634 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4128449731803188196, guid: febf9e114437f7c439f0bee85bef9786, type: 3}

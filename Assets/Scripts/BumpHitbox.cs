@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using System.Collections;
 using Photon.Pun;
 
-public class BumpHitbox : MonoBehaviourPunCallbacks
+public class BumpHitbox : MonoBehaviourPun
 {
     public float chargeSpeed = 3.0f;
 
@@ -25,14 +25,16 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
     private Collider hitboxCollider;
     private Collider ownershipHitboxCollider;
 
+    private PlayerController playerMovement;
+
     void Start()
     {
-
         powerSlider = GameObject.FindGameObjectWithTag("powerSlider").GetComponent<Slider>();
         ownershipHitboxCollider = transform.Find("Hitbox-Bump-Ownership").GetComponent<Collider>();
         hitboxCollider = GetComponent<Collider>();
         hitboxCollider.enabled = false;
         ownershipHitboxCollider.enabled = false;
+        playerMovement = FindAnyObjectByType<PlayerController>();
     }
 
     void Update()
@@ -40,7 +42,7 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
 
         if (!photonView.IsMine) return;
 
-        if (Input.GetMouseButtonDown(1) && GetIsGrounded())
+        if (Input.GetMouseButtonDown(1) && playerMovement.GetIsGrounded())
         {
             Debug.Log("mouse direito downn");
             isCharging = true;
@@ -51,7 +53,7 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
             hitboxCollider.enabled = true;
             ownershipHitboxCollider.enabled = true;
         }
-        if (Input.GetMouseButton(0) && isCharging && GetIsGrounded())
+        if (Input.GetMouseButton(0) && isCharging && playerMovement.GetIsGrounded())
         {
             hitChargeTime += Time.deltaTime * chargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
@@ -59,7 +61,7 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
             powerSlider.value = powerPercent;
         }
-        if (Input.GetMouseButtonUp(1) && GetIsGrounded())
+        if (Input.GetMouseButtonUp(1) && playerMovement.GetIsGrounded())
         {
             Debug.Log("mouse direito up");
             isCharging = false;
@@ -152,10 +154,5 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
                 ballRb.angularVelocity = angularVelocity;
             }
         }
-    }
-
-    private bool GetIsGrounded()
-    {
-        return Physics.Raycast((transform.position + Vector3.up * 1f), Vector3.down, out RaycastHit hit, 0.29f);
     }
 }
