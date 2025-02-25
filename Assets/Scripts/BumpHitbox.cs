@@ -156,6 +156,6 @@ public class BumpHitbox : MonoBehaviourPunCallbacks
 
     private bool GetIsGrounded()
     {
-        return Physics.Raycast((transform.position + Vector3.up * 1f), Vector3.down, out RaycastHit hit, 0.28f);
+        return Physics.Raycast((transform.position + Vector3.up * 1f), Vector3.down, out RaycastHit hit, 0.29f);
     }
 }

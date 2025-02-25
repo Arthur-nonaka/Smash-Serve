@@ -183,7 +183,7 @@ public class PlayerController : MonoBehaviourPun
         if (volleyballRb != null)
         {
             Vector3 directionToPlayer = (transform.position - spawnPosition).normalized;
-            volleyballRb.AddForce(directionToPlayer * 23f + Vector3.up * 8.5f, ForceMode.Impulse); // Adjust the force as needed
+            volleyballRb.AddForce(directionToPlayer * 23f + Vector3.up * 8.5f, ForceMode.Impulse);
         }
     }
 
@@ -271,17 +271,10 @@ public class PlayerController : MonoBehaviourPun
                 }
             }
 
-            lockedHorizontalVelocity = worldInput * speed;
-            horizontalVelocity = lockedHorizontalVelocity;
-            finalMove = horizontalVelocity;
         }
-        else
-        {
-            Vector3 targetVelocity = lockedHorizontalVelocity + (worldInput * walkSpeed * airControlFactor);
-            horizontalVelocity = Vector3.Lerp(horizontalVelocity, targetVelocity, airAcceleration * Time.deltaTime);
-            horizontalVelocity = Vector3.ClampMagnitude(horizontalVelocity, walkSpeed);
-            finalMove = horizontalVelocity;
-        }
+        lockedHorizontalVelocity = worldInput * speed;
+        horizontalVelocity = lockedHorizontalVelocity;
+        finalMove = horizontalVelocity;
 
         controller.Move(finalMove * Time.deltaTime);
     }
@@ -346,7 +339,7 @@ public class PlayerController : MonoBehaviourPun
 
     private bool GetIsGrounded()
     {
-        return Physics.Raycast((transform.position + Vector3.up * 1f), Vector3.down, out RaycastHit hit, 0.28f);
+        return Physics.Raycast((transform.position + Vector3.up * 1f), Vector3.down, out RaycastHit hit, 0.29f);
     }
 
     void PerformSet(float power, int directionMultiplier)
