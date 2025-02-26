@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 
 public class VirtualJoystickUI : MonoBehaviour
 {
@@ -16,10 +17,12 @@ public class VirtualJoystickUI : MonoBehaviour
     {
         joystickBG = GameObject.FindGameObjectWithTag("JoystickBG").GetComponent<RectTransform>();
         joystickHandle = GameObject.FindGameObjectWithTag("JoystickHandle").GetComponent<RectTransform>();
+
     }
 
     void Update()
     {
+        Debug.Log("joystickHandle: " + joystickHandle.anchoredPosition); 
         float normalizedHorizontal = virtualJoystickOffsetX / joystickMaxOffset;
         normalizedHorizontal = Mathf.Clamp(normalizedHorizontal, -1f, 1f);
 

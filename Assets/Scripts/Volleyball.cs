@@ -74,7 +74,8 @@ public class VolleyballBall : MonoBehaviourPunCallbacks
             LayerMask.GetMask("Ball") |
             LayerMask.GetMask("Player") |
             LayerMask.GetMask("Hitbox") |
-            LayerMask.GetMask("Net")
+            LayerMask.GetMask("Net") |
+            LayerMask.GetMask("Block")
         );
 
         RaycastHit hit;

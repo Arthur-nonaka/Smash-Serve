@@ -65,8 +65,10 @@ public class PlayerController : MonoBehaviourPun
     public float joystickMaxOffset = 50f;
     public float joystickDeadzone = 2f;
     public float joystickMaxRotationSpeed = 90f;
-    public VirtualJoystickUI virtualJoystickUI;
+    private VirtualJoystickUI virtualJoystickUI;
     private Vector2 virtualMousePos;
+
+    private bool wasBlocking = false;
 
 
     void Start()
@@ -75,6 +77,8 @@ public class PlayerController : MonoBehaviourPun
         virtualMousePos = Vector2.zero;
         int playerLayer = LayerMask.NameToLayer("Player");
         int ballLayer = LayerMask.NameToLayer("Ball");
+
+        blockHitbox.SetActive(false);
 
         if (playerLayer == -1 || ballLayer == -1)
         {
@@ -90,6 +94,8 @@ public class PlayerController : MonoBehaviourPun
             enabled = false;
             playerCamera.gameObject.SetActive(false);
         }
+
+        virtualJoystickUI = FindFirstObjectByType<VirtualJoystickUI>();
 
         powerSlider = GameObject.FindGameObjectWithTag("powerSlider").GetComponent<Slider>();
         jumpSlider = GameObject.FindGameObjectWithTag("jumpSlider").GetComponent<Slider>();
@@ -190,13 +196,33 @@ public class PlayerController : MonoBehaviourPun
     {
         if (Input.GetMouseButton(1) && !GetIsGrounded() && !Input.GetMouseButton(0))
         {
+            photonView.RPC("ActivateBlock", RpcTarget.All);
             animator.SetBool("IsBlocking", true);
-            blockHitbox.SetActive(true);
-
+            wasBlocking = true;
         }
-        else
+        if ((Input.GetMouseButtonUp(1) || GetIsGrounded()) && wasBlocking)
         {
+            photonView.RPC("DeactivateBlock", RpcTarget.All);
             animator.SetBool("IsBlocking", false);
+            blockHitbox.SetActive(false);
+            wasBlocking = false;
+        }
+    }
+
+    [PunRPC]
+    void ActivateBlock()
+    {
+        if (blockHitbox != null)
+        {
+            blockHitbox.SetActive(true);
+        }
+    }
+
+    [PunRPC]
+    void DeactivateBlock()
+    {
+        if (blockHitbox != null)
+        {
             blockHitbox.SetActive(false);
         }
     }
