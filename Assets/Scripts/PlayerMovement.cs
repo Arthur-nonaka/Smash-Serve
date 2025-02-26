@@ -16,6 +16,7 @@ public class PlayerController : MonoBehaviourPun
     public GameObject setHitbox;
     public GameObject spikeHitbox;
     public GameObject blockHitbox;
+    public GameObject diveHitbox;
     public float walkSpeed = 5f;
     public float runSpeed = 10f;
     public float gravity = -9.81f;
@@ -70,6 +71,12 @@ public class PlayerController : MonoBehaviourPun
 
     private bool wasBlocking = false;
 
+    [Header("Dive Settings")]
+
+    public float diveForce = 10f;
+    public float diveDuration = 1.0f;
+    private bool isDiving = false;
+
 
     void Start()
     {
@@ -96,6 +103,7 @@ public class PlayerController : MonoBehaviourPun
         }
 
         virtualJoystickUI = FindFirstObjectByType<VirtualJoystickUI>();
+        diveHitbox.SetActive(false);
 
         powerSlider = GameObject.FindGameObjectWithTag("powerSlider").GetComponent<Slider>();
         jumpSlider = GameObject.FindGameObjectWithTag("jumpSlider").GetComponent<Slider>();
@@ -121,6 +129,7 @@ public class PlayerController : MonoBehaviourPun
         HandleBallInteraction();
         HandleSpike();
         HandleBlock();
+        HandleDive();
 
         float currentY = transform.position.y;
         animator.SetFloat("Height", currentY);
@@ -190,6 +199,25 @@ public class PlayerController : MonoBehaviourPun
             Vector3 directionToPlayer = (transform.position - spawnPosition).normalized;
             volleyballRb.AddForce(directionToPlayer * 23f + Vector3.up * 8.5f, ForceMode.Impulse);
         }
+    }
+
+    void HandleDive()
+    {
+        if (Input.GetKey(KeyCode.Q) && GetIsGrounded() && !isDiving)
+        {
+            StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsDiving", true, 0.5f));
+            diveHitbox.SetActive(true);
+            isDiving = true;
+            StartCoroutine(EndDiveAfterDelay(diveDuration));
+        }
+    }
+
+    IEnumerator EndDiveAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        animator.SetBool("IsDiving", false);
+        diveHitbox.SetActive(false);
+        isDiving = false;
     }
 
     void HandleBlock()
@@ -301,7 +329,14 @@ public class PlayerController : MonoBehaviourPun
         horizontalVelocity = lockedHorizontalVelocity;
         finalMove = horizontalVelocity;
 
-        controller.Move(finalMove * Time.deltaTime);
+        if (!isDiving)
+        {
+            controller.Move(finalMove * Time.deltaTime);
+        }
+        else
+        {
+            controller.Move(transform.forward * diveForce * Time.deltaTime);
+        }
     }
 
     void HandleJump()

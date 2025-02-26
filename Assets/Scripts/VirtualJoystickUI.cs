@@ -22,7 +22,6 @@ public class VirtualJoystickUI : MonoBehaviour
 
     void Update()
     {
-        Debug.Log("joystickHandle: " + joystickHandle.anchoredPosition); 
         float normalizedHorizontal = virtualJoystickOffsetX / joystickMaxOffset;
         normalizedHorizontal = Mathf.Clamp(normalizedHorizontal, -1f, 1f);
 
