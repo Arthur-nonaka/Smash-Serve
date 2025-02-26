@@ -65,7 +65,7 @@ public class PlayerController : MonoBehaviourPun
     public float joystickMaxOffset = 50f;
     public float joystickDeadzone = 2f;
     public float joystickMaxRotationSpeed = 90f;
-    private VirtualJoystickUI virtualJoystickUI;
+    public VirtualJoystickUI virtualJoystickUI;
     private Vector2 virtualMousePos;
 
 
@@ -73,7 +73,6 @@ public class PlayerController : MonoBehaviourPun
     {
         Cursor.lockState = CursorLockMode.Locked;
         virtualMousePos = Vector2.zero;
-        virtualJoystickUI = FindAnyObjectByType<VirtualJoystickUI>();
         int playerLayer = LayerMask.NameToLayer("Player");
         int ballLayer = LayerMask.NameToLayer("Ball");
 
@@ -339,7 +338,7 @@ public class PlayerController : MonoBehaviourPun
 
     public bool GetIsGrounded()
     {
-        return Physics.Raycast((transform.position + Vector3.up * 1f), Vector3.down, out RaycastHit hit, 0.29f);
+        return Physics.Raycast((transform.position + Vector3.up * 1f), Vector3.down, out RaycastHit hit, 0.3f);
     }
 
     void PerformSet(float power, int directionMultiplier)
@@ -473,11 +472,6 @@ public class PlayerController : MonoBehaviourPun
             {
                 virtualJoystickUI.virtualJoystickOffsetX = virtualMousePos.x;
             }
-            else
-            {
-                virtualJoystickUI.virtualJoystickOffsetX = Vector2.zero.x;
-
-            }
 
             float normalizedHorizontal = virtualMousePos.x / joystickMaxOffset;
             float rotationDeltaX = normalizedHorizontal * joystickMaxRotationSpeed * Time.deltaTime;
@@ -494,6 +488,7 @@ public class PlayerController : MonoBehaviourPun
                 if (!wasGrounded)
                 {
                     // transform.rotation = Quaternion.Euler(0f, cameraYaw, 0f);
+                    virtualJoystickUI.virtualJoystickOffsetX = Vector2.zero.x;
                 }
                 else
                 {

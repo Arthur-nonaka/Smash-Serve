@@ -121,6 +121,8 @@ public class VolleyballBall : MonoBehaviourPunCallbacks
             }
             markCreated = true;
 
+            GetComponent<Collider>().enabled = false;
+
         }
     }
 
@@ -134,7 +136,7 @@ public class VolleyballBall : MonoBehaviourPunCallbacks
             {
                 markRenderer.material.color = color;
             }
-            StartCoroutine(DestroyMarkAfterTime(mark, 3f));
+            StartCoroutine(DestroyMarkAfterTime(mark, 2f));
         }
     }
 

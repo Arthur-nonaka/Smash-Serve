@@ -9,6 +9,8 @@ TagManager:
   - Court
   - powerSlider
   - jumpSlider
+  - JoystickBG
+  - JoystickHandle
   layers:
   - Default
   - TransparentFX

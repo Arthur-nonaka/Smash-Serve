@@ -446,7 +446,7 @@ GameObject:
   - component: {fileID: 314073513}
   m_Layer: 5
   m_Name: JoystickHandle
-  m_TagString: Untagged
+  m_TagString: JoystickHandle
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -850,8 +850,8 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1.5
+  m_Color: {r: 1, g: 0.995131, b: 0.9009434, a: 1}
+  m_Intensity: 2
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -890,10 +890,10 @@ Light:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingLayerMask: 1
-  m_Lightmapping: 2
+  m_Lightmapping: 1
   m_LightShadowCasterMode: 0
   m_AreaSize: {x: 1, y: 1}
-  m_BounceIntensity: 1
+  m_BounceIntensity: 3
   m_ColorTemperature: 6570
   m_UseColorTemperature: 0
   m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
@@ -950,7 +950,7 @@ GameObject:
   - component: {fileID: 1467601563}
   m_Layer: 5
   m_Name: JoystickBG
-  m_TagString: Untagged
+  m_TagString: JoystickBG
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -987,8 +987,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2806c183536a9534382bd29e4d6a2c39, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  joystickBG: {fileID: 1467601561}
-  joystickHandle: {fileID: 314073512}
   joystickMaxOffset: 30
   virtualJoystickOffsetX: 0.3
 --- !u!114 &1467601563
@@ -1055,54 +1053,6 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 4.72, z: -37.74}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1593860146
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1593860148}
-  - component: {fileID: 1593860147}
-  m_Layer: 0
-  m_Name: Joystick
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1593860147
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1593860146}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2806c183536a9534382bd29e4d6a2c39, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  joystickBG: {fileID: 1467601561}
-  joystickHandle: {fileID: 314073512}
-  joystickMaxOffset: 30
-  virtualJoystickOffsetX: 1
---- !u!4 &1593860148
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1593860146}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 630.05414, y: 429.52917, z: 633.9555}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1369,4 +1319,3 @@ SceneRoots:
   - {fileID: 1555547349}
   - {fileID: 1076815040}
   - {fileID: 40098792}
-  - {fileID: 1593860148}

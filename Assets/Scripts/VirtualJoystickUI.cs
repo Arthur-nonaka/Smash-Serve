@@ -1,16 +1,22 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class VirtualJoystickUI : MonoBehaviour 
+public class VirtualJoystickUI : MonoBehaviour
 {
     [Header("UI References")]
-    public RectTransform joystickBG;     
-    public RectTransform joystickHandle;   
+    private RectTransform joystickBG;
+    private RectTransform joystickHandle;
 
     [Header("Joystick Settings")]
     public float joystickMaxOffset = 50f;
 
     public float virtualJoystickOffsetX = 0f;
+
+    void Start()
+    {
+        joystickBG = GameObject.FindGameObjectWithTag("JoystickBG").GetComponent<RectTransform>();
+        joystickHandle = GameObject.FindGameObjectWithTag("JoystickHandle").GetComponent<RectTransform>();
+    }
 
     void Update()
     {
