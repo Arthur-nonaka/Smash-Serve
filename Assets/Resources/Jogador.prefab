@@ -231,8 +231,8 @@ Transform:
   m_GameObject: {fileID: 7799959108347594172}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: 0.158, y: 2.836, z: 0.304}
-  m_LocalScale: {x: 1.8776106, y: 0.29714385, z: 2.0038147}
+  m_LocalPosition: {x: 0.158, y: 2.999, z: 0.304}
+  m_LocalScale: {x: 2.4562902, y: 0.29714385, z: 2.0038147}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 5352178416288418656}
@@ -533,7 +533,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6991256729019146416, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: diveForce
-      value: 4
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 6991256729019146416, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: diveHitbox
@@ -553,7 +553,7 @@ PrefabInstance:
       objectReference: {fileID: 7799959108347594172}
     - target: {fileID: 6991256729019146416, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: diveDuration
-      value: 1
+      value: 0.7
       objectReference: {fileID: 0}
     - target: {fileID: 6991256729019146416, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
       propertyPath: handPosition

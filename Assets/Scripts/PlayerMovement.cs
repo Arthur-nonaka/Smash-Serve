@@ -342,7 +342,7 @@ public class PlayerController : MonoBehaviourPun
     void HandleJump()
     {
 
-        if (Input.GetKey(KeyCode.Space) && GetIsGrounded() && !stopJump)
+        if (Input.GetKey(KeyCode.Space) && GetIsGrounded() && !stopJump && !isDiving)
         {
             animator.SetBool("IsApproach", true);
             if (chargeTimeReverse > 0)
@@ -371,7 +371,7 @@ public class PlayerController : MonoBehaviourPun
             jumpSlider.value = jumpPercent;
         }
 
-        if (Input.GetKeyUp(KeyCode.Space) && GetIsGrounded())
+        if (Input.GetKeyUp(KeyCode.Space) && GetIsGrounded() && !isDiving)
         {
             if (!stopJump)
             {
