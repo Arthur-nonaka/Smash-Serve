@@ -105,24 +105,32 @@ public class VolleyballBall : MonoBehaviourPunCallbacks
     }
     void OnCollisionEnter(Collision collision)
     {
+        if (!photonView.IsMine)
+            return;
+
         if (collision.gameObject.CompareTag("Ground") && !markCreated)
         {
             Vector3 hitPoint = collision.contacts[0].point;
             Collider courtCollider = GameObject.FindGameObjectWithTag("Court").GetComponent<Collider>();
+            bool isIn = false;
             if (courtCollider.bounds.Contains(hitPoint))
             {
                 CreateMark(hitPoint, Color.green);
                 Debug.Log("Ball is in the court");
+                isIn = true;
 
             }
             else
             {
                 CreateMark(hitPoint, Color.red);
                 Debug.Log("Ball is out of the court");
+                isIn = false;
             }
             markCreated = true;
 
             GetComponent<Collider>().enabled = false;
+
+            photonView.RPC("BallTouchedGround", RpcTarget.Others, transform.position, isIn);
 
         }
     }
@@ -164,5 +172,22 @@ public class VolleyballBall : MonoBehaviourPunCallbacks
             rb.linearVelocity = (Vector3)stream.ReceiveNext();
             rb.angularVelocity = (Vector3)stream.ReceiveNext();
         }
+    }
+
+    [PunRPC]
+    void BallTouchedGround(Vector3 groundPosition, isIn)
+    {
+        if (isIn)
+        {
+
+            CreateMark(groundPosition, Color.green);
+        }
+        else
+        {
+            CreateMark(groundPosition, Color.red);
+
+        }
+        markCreated = true;
+        GetComponent<Collider>().enabled = false;
     }
 }
