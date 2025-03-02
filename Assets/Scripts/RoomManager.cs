@@ -1,46 +1,33 @@
-using UnityEngine;
-using Photon.Pun;
-using Photon.Realtime;
+// using UnityEngine;
+// using Mirror;
 
-public class RoomManager : MonoBehaviourPunCallbacks
-{
-    public GameObject playerPrefab;
+// public class RoomManager : NetworkManager
+// {
+//     // Assign your playerPrefab (set in the NetworkManager component)
+//     // and a spawn point in the inspector.
+//     public Transform spawnPoints;
 
-    [Space]
+//     public override void OnStartServer()
+//     {
+//         base.OnStartServer();
+//         Debug.Log("Server started!");
+//     }
 
-    public Transform spawnPoints;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        Debug.Log("Creating or joining room...");
+//     public override void OnClientConnect(NetworkConnection conn)
+//     {
+//         base.OnClientConnect(conn);
+//         Debug.Log("Client connected to server!");
+//     }
 
-        PhotonNetwork.ConnectUsingSettings();
-    }
-
-    public override void OnConnectedToMaster()
-    {
-        base.OnConnectedToMaster();
-        Debug.Log("Connected to Photon Server!");
-        PhotonNetwork.JoinLobby();
-    }
-
-    public override void OnJoinedLobby()
-    {
-        base.OnJoinedLobby();
-        Debug.Log("Joined Lobby!");
-        PhotonNetwork.JoinOrCreateRoom("Room", new RoomOptions { MaxPlayers = 4 }, TypedLobby.Default);
-    }
-
-    public override void OnJoinedRoom() {
-        base.OnJoinedRoom();
-        Debug.Log("Joined Room!");
-        
-        GameObject _player = PhotonNetwork.Instantiate(playerPrefab.name, spawnPoints.position, spawnPoints.rotation);
-
-    }
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-}
+//     // This is called on the server when a new client connects.
+//     public override void OnServerAddPlayer(NetworkConnection conn)
+//     {
+//         Debug.Log("Adding player for connection: " + conn.connectionId);
+//         // Use the provided spawn point.
+//         Transform startPos = spawnPoints;
+//         // Instantiate the playerPrefab at the spawn point.
+//         GameObject player = Instantiate(playerPrefab, startPos.position, startPos.rotation);
+//         // Add the player for this connection.
+//         NetworkServer.AddPlayerForConnection(conn, player);
+//     }
+// }

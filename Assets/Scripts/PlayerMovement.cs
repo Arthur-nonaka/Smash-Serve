@@ -1,11 +1,10 @@
+using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
-using System;
-using Photon.Pun;
-using Photon.Realtime;
+using Mirror;
 
-public class PlayerController : MonoBehaviourPun
+public class PlayerController : NetworkBehaviour
 {
     public CharacterController controller;
     public Transform playerCamera;
@@ -72,11 +71,9 @@ public class PlayerController : MonoBehaviourPun
     private bool wasBlocking = false;
 
     [Header("Dive Settings")]
-
     public float diveForce = 10f;
     public float diveDuration = 1.0f;
     private bool isDiving = false;
-
 
     void Start()
     {
@@ -96,7 +93,8 @@ public class PlayerController : MonoBehaviourPun
             Physics.IgnoreLayerCollision(playerLayer, ballLayer);
         }
 
-        if (!photonView.IsMine)
+        // In Mirror, only the local player should run input and camera code.
+        if (!isLocalPlayer)
         {
             enabled = false;
             playerCamera.gameObject.SetActive(false);
@@ -115,18 +113,16 @@ public class PlayerController : MonoBehaviourPun
         jumpSlider.minValue = 0;
         jumpSlider.maxValue = 100;
         jumpSlider.value = 0;
-
-
     }
 
     void Update()
     {
-        if (!photonView.IsMine) return;
+        if (!isLocalPlayer) return;
 
         HandleMovement();
         HandleJump();
         HandleCamera();
-        HandleBallInteraction();
+        // HandleBallInteraction();
         HandleSpike();
         HandleBlock();
         HandleDive();
@@ -134,15 +130,8 @@ public class PlayerController : MonoBehaviourPun
         float currentY = transform.position.y;
         animator.SetFloat("Height", currentY);
 
-        if (Input.GetKeyDown(KeyCode.V))
-        {
-            InstantiateVolleyballTowardsPlayer();
-        }
-
-
         if (Input.GetKey(KeyCode.F) && !Input.GetKey(KeyCode.R))
         {
-
             hitChargeTime += Time.deltaTime * powerChargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
             animator.SetBool("IsSetting", true);
@@ -157,7 +146,6 @@ public class PlayerController : MonoBehaviourPun
             float power = hitChargeTime;
             StartCoroutine(DelayedHitboxCheck(setHitbox, () => PerformSet(power, 1), delayTime));
             hitChargeTime = 0f;
-
             powerSlider.value = 0;
         }
 
@@ -177,27 +165,25 @@ public class PlayerController : MonoBehaviourPun
             float power = hitChargeTime;
             StartCoroutine(DelayedHitboxCheck(setHitbox, () => PerformSet(power, -1), delayTime));
             hitChargeTime = 0f;
-
             powerSlider.value = 0;
         }
     }
 
-    public IEnumerator SetAnimatorBoolWithDelay(string parameter, bool value, float delay)
-    {
-        animator.SetBool(parameter, value);
-        yield return new WaitForSeconds(delay);
-        animator.SetBool(parameter, !value);
-    }
 
-    void InstantiateVolleyballTowardsPlayer()
+    [ClientRpc]
+    void RpcSyncBallState(Vector3 position, Vector3 velocity, Vector3 angularVelocity)
     {
-        Vector3 spawnPosition = transform.position + transform.forward * 10f + Vector3.up * 7f;
-        GameObject volleyball = PhotonNetwork.Instantiate(ballPrefab.name, spawnPosition, Quaternion.identity);
-        Rigidbody volleyballRb = volleyball.GetComponent<Rigidbody>();
-        if (volleyballRb != null)
+        if (ball != null)
         {
-            Vector3 directionToPlayer = (transform.position - spawnPosition).normalized;
-            volleyballRb.AddForce(directionToPlayer * 23f + Vector3.up * 8.5f, ForceMode.Impulse);
+            Rigidbody ballRb = ball.GetComponent<Rigidbody>();
+            if (ballRb != null)
+            {
+                Debug.Log("Spike performed, RPC.");
+                Debug.Log("Spike Direction: " + position + ", Hit Power: " + velocity + ", Spin: " + angularVelocity);
+                ball.transform.position = position;
+                ballRb.linearVelocity = velocity;
+                ballRb.angularVelocity = angularVelocity;
+            }
         }
     }
 
@@ -224,21 +210,33 @@ public class PlayerController : MonoBehaviourPun
     {
         if (Input.GetMouseButton(1) && !GetIsGrounded() && !Input.GetMouseButton(0))
         {
-            photonView.RPC("ActivateBlock", RpcTarget.All);
+            CmdActivateBlock();
             animator.SetBool("IsBlocking", true);
             wasBlocking = true;
         }
         if ((Input.GetMouseButtonUp(1) || GetIsGrounded()) && wasBlocking)
         {
-            photonView.RPC("DeactivateBlock", RpcTarget.All);
+            CmdDeactivateBlock();
             animator.SetBool("IsBlocking", false);
             blockHitbox.SetActive(false);
             wasBlocking = false;
         }
     }
 
-    [PunRPC]
-    void ActivateBlock()
+    [Command]
+    void CmdActivateBlock()
+    {
+        RpcActivateBlock();
+    }
+
+    [Command]
+    void CmdDeactivateBlock()
+    {
+        RpcDeactivateBlock();
+    }
+
+    [ClientRpc]
+    void RpcActivateBlock()
     {
         if (blockHitbox != null)
         {
@@ -246,8 +244,8 @@ public class PlayerController : MonoBehaviourPun
         }
     }
 
-    [PunRPC]
-    void DeactivateBlock()
+    [ClientRpc]
+    void RpcDeactivateBlock()
     {
         if (blockHitbox != null)
         {
@@ -273,7 +271,6 @@ public class PlayerController : MonoBehaviourPun
             float power = hitChargeTime;
             StartCoroutine(DelayedHitboxCheck(spikeHitbox, () => PerformSpike(power), delayTime));
             hitChargeTime = 0f;
-
             powerSlider.value = 0;
             isAttacking = false;
             virtualMousePos = Vector2.zero;
@@ -282,7 +279,6 @@ public class PlayerController : MonoBehaviourPun
         if (Input.GetMouseButtonUp(0) && GetIsGrounded() && isAttacking)
         {
             hitChargeTime = 0f;
-
             powerSlider.value = 0;
             isAttacking = false;
             virtualMousePos = Vector2.zero;
@@ -323,7 +319,6 @@ public class PlayerController : MonoBehaviourPun
                     speed *= 0.5f;
                 }
             }
-
         }
         lockedHorizontalVelocity = worldInput * speed;
         horizontalVelocity = lockedHorizontalVelocity;
@@ -341,7 +336,6 @@ public class PlayerController : MonoBehaviourPun
 
     void HandleJump()
     {
-
         if (Input.GetKey(KeyCode.Space) && GetIsGrounded() && !stopJump && !isDiving)
         {
             animator.SetBool("IsApproach", true);
@@ -392,14 +386,13 @@ public class PlayerController : MonoBehaviourPun
             velocity.y *= durationOnAir;
         }
 
-
         velocity.y += gravity * Time.deltaTime;
         controller.Move(new Vector3(0, velocity.y, 0) * Time.deltaTime);
     }
 
     public bool GetIsGrounded()
     {
-        return Physics.Raycast((transform.position + Vector3.up * 1f), Vector3.down, out RaycastHit hit, 0.3f);
+        return Physics.Raycast(transform.position + Vector3.up * 1f, Vector3.down, 0.3f);
     }
 
     void PerformSet(float power, int directionMultiplier)
@@ -408,59 +401,71 @@ public class PlayerController : MonoBehaviourPun
 
         if (ball != null)
         {
-            RequestOwnership(ball);
+            Vector3 setDirection = playerCamera.forward;
+            if (directionMultiplier < 0)
+            {
+                setDirection = new Vector3(-setDirection.x, setDirection.y, -setDirection.z);
+            }
+
+            CmdPerformSet(power, directionMultiplier, setDirection);
+        }
+    }
+
+    [Command]
+    void CmdPerformSet(float power, int directionMultiplier, Vector3 setDirection)
+    {
+        if (ball != null)
+        {
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
-                StartCoroutine(HoldAndSetBall(ballRb, power, directionMultiplier));
+                StartCoroutine(ServerHoldAndSetBall(ballRb, power, directionMultiplier, setDirection));
             }
         }
     }
 
-    IEnumerator HoldAndSetBall(Rigidbody ballRb, float power, int directionMultiplier)
+    IEnumerator ServerHoldAndSetBall(Rigidbody ballRb, float power, int directionMultiplier, Vector3 setDirection)
     {
-        Vector3 startPosition = ball.transform.position;
-        float duration = 0.16f;
-        float elapsedTime = 0f;
         Vector3 handMidPoint = (handPositionL.position + handPositionR.position) / 2;
-        Vector3 midpoint = new Vector3(handMidPoint.x, transform.position.y * -7.1f, handMidPoint.z);
-        midpoint += Vector3.back * 0.15f;
+        Vector3 targetPosition = handMidPoint + Vector3.back * 0.15f;
 
         ballRb.isKinematic = true;
 
+        float duration = 0.16f;
+        float elapsedTime = 0f;
         while (elapsedTime < duration)
         {
-            Vector3 currentHandMidpoint = (handPositionL.position + handPositionR.position) / 2;
-            Vector3 targetPosition = currentHandMidpoint + Vector3.back * 0.15f;
-
-            ball.transform.position = Vector3.Lerp(ball.transform.position, targetPosition, Time.deltaTime * 10f);
-
+            Vector3 currentHandMidPoint = (handPositionL.position + handPositionR.position) / 2;
+            Vector3 newTarget = currentHandMidPoint + Vector3.back * 0.15f;
+            ball.transform.position = Vector3.Lerp(ball.transform.position, newTarget, Time.deltaTime * 10f);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
+
         if (directionMultiplier >= 1)
         {
-            StartCoroutine(animationController.SetAnimatorBoolWithDelay("Front_Set", true, 0.5f));
+            RpcPlaySetAnimation("Front_Set");
         }
         else
         {
-            StartCoroutine(animationController.SetAnimatorBoolWithDelay("Back_Set", true, 0.5f));
+            RpcPlaySetAnimation("Back_Set");
         }
 
-        animator.SetBool("IsSetting", false);
-
-        // ball.transform.position = midpoint;
-
-        // yield return new WaitForSeconds(0.005f);
-
-        Vector3 setDirection = playerCamera.transform.forward * directionMultiplier;
-        setDirection.y = Mathf.Abs(setDirection.y) + 0.5f;
         float setPower = Mathf.Lerp(setForce * 0.5f, setForce * 2f, power / maxChargeTime);
 
         ballRb.isKinematic = false;
-        yield return null;
+
         ballRb.AddForce(setDirection.normalized * setPower, ForceMode.Impulse);
-        photonView.RPC("SyncBallState", RpcTarget.Others, ball.transform.position, ballRb.linearVelocity, ballRb.angularVelocity);
+
+        RpcSyncBallState(ball.transform.position, ballRb.linearVelocity, ballRb.angularVelocity);
+        yield return null;
+    }
+
+    [ClientRpc]
+    void RpcPlaySetAnimation(string animationName)
+    {
+        StartCoroutine(animationController.SetAnimatorBoolWithDelay(animationName, true, 0.5f));
+        animator.SetBool("IsSetting", false);
     }
 
     void PerformSpike(float power)
@@ -469,16 +474,16 @@ public class PlayerController : MonoBehaviourPun
 
         if (ball != null)
         {
-            RequestOwnership(ball);
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
-                Vector3 spikeDirection = (playerCamera.transform.forward + Vector3.down * 0.2f).normalized;
+                Vector3 spikeDirection = (playerCamera.forward + Vector3.down * 0.2f).normalized;
                 float hitPower = spikeForce * (power / maxChargeTime + 0.1f);
-                Vector3 spin = playerCamera.transform.right * 20f;
 
-                StartCoroutine(WaitForOwnershipAndSpike(ballRb, spikeDirection, hitPower, spin));
-                Debug.Log("Spike attempted, waiting for ownership...");
+                StartCoroutine(animationController.SetAnimatorBoolWithDelay("Spiked", true, 0.5f));
+                animator.SetBool("IsSpiking", false);
+                CmdPerformSpike(spikeDirection, hitPower);
+                Debug.Log("Spike attempted, command sent to server.");
             }
         }
         canSpike = false;
@@ -486,25 +491,35 @@ public class PlayerController : MonoBehaviourPun
         virtualMousePos = Vector2.zero;
     }
 
-    IEnumerator WaitForOwnershipAndSpike(Rigidbody ballRb, Vector3 spikeDirection, float hitPower, Vector3 spin)
+    [Command]
+    void CmdPerformSpike(Vector3 spikeDirection, float hitPower)
     {
-        while (!ball.GetComponent<PhotonView>().IsMine)
+        if (ball != null)
         {
-            yield return null;
+            Rigidbody ballRb = ball.GetComponent<Rigidbody>();
+            if (ballRb != null)
+            {
+                Vector3 spin = playerCamera.right * 20f;
+
+
+                ballRb.linearVelocity = Vector3.zero;
+                ballRb.angularVelocity = Vector3.zero;
+                ballRb.AddForce(spikeDirection * hitPower, ForceMode.Impulse);
+                ballRb.AddTorque(spin, ForceMode.Impulse);
+
+                Debug.Log("Spike performed, command sent to clients.");
+                Debug.Log("Spike Direction: " + spikeDirection + ", Hit Power: " + hitPower + ", Spin: " + spin);
+
+                StartCoroutine(SyncBallStateNextFrame());
+            }
         }
-
-        StartCoroutine(animationController.SetAnimatorBoolWithDelay("Spiked", true, 0.5f));
-        animator.SetBool("IsSpiking", false);
-
-        ballRb.linearVelocity = Vector3.zero;
-        ballRb.angularVelocity = Vector3.zero;
-        ballRb.AddForce(spikeDirection * hitPower, ForceMode.Impulse);
-        ballRb.AddTorque(spin, ForceMode.Impulse);
-
-        photonView.RPC("SyncBallState", RpcTarget.Others, ball.transform.position, ballRb.linearVelocity, ballRb.angularVelocity);
     }
 
-
+    IEnumerator SyncBallStateNextFrame()
+    {
+        yield return new WaitForFixedUpdate();
+        RpcSyncBallState(ball.transform.position, ball.GetComponent<Rigidbody>().linearVelocity, ball.GetComponent<Rigidbody>().angularVelocity);
+    }
 
     void HandleCamera()
     {
@@ -548,8 +563,8 @@ public class PlayerController : MonoBehaviourPun
             {
                 if (!wasGrounded)
                 {
-                    // transform.rotation = Quaternion.Euler(0f, cameraYaw, 0f);
-                    virtualJoystickUI.virtualJoystickOffsetX = Vector2.zero.x;
+                    if (virtualJoystickUI != null)
+                        virtualJoystickUI.virtualJoystickOffsetX = 0f;
                 }
                 else
                 {
@@ -568,39 +583,40 @@ public class PlayerController : MonoBehaviourPun
         wasGrounded = GetIsGrounded();
     }
 
-    void HandleBallInteraction()
-    {
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            SpawnBall();
-        }
-    }
+    // void HandleBallInteraction()
+    // {
+    //     if (Input.GetKeyDown(KeyCode.B))
+    //     {
+    //         CmdSpawnBall();
+    //     }
+    // }
 
-    void SpawnBall()
-    {
-        Vector3 spawnPosition = transform.position + Vector3.up * 20;
-        PhotonNetwork.Instantiate(ballPrefab.name, spawnPosition, Quaternion.identity);
-    }
+    // [Command]
+    // void CmdSpawnBall()
+    // {
+    //     Vector3 spawnPosition = transform.position + Vector3.up * 20;
+    //     GameObject newBall = Instantiate(ballPrefab, spawnPosition, Quaternion.identity);
+    //     NetworkServer.Spawn(newBall);
+    // }
 
     IEnumerator DelayedHitboxCheck(GameObject hitbox, Action action, float delay)
     {
         if (IsBallInHitbox(hitbox))
         {
-            action.Invoke(); // Perform the action immediately
+            action.Invoke();
             yield break;
         }
 
         float elapsedTime = 0f;
         while (elapsedTime < delay)
         {
-            if (IsBallInHitbox(hitbox))
+            if (IsBallCenterInHitbox(hitbox))
             {
-                action.Invoke(); // Perform the action when the ball enters
+                action.Invoke();
                 yield break;
             }
-
             elapsedTime += Time.deltaTime;
-            yield return null; // Wait for next frame
+            yield return null;
         }
     }
 
@@ -612,10 +628,19 @@ public class PlayerController : MonoBehaviourPun
             if (collider.gameObject == ball)
             {
                 Debug.Log("Collide With " + hitbox.name);
-                return true; // Ball is inside
+                return true;
             }
         }
         return false;
+    }
+
+    bool IsBallCenterInHitbox(GameObject hitbox)
+    {
+        Collider hitboxCollider = hitbox.GetComponent<Collider>();
+        if (hitboxCollider == null || ball == null)
+            return false;
+
+        return hitboxCollider.bounds.Contains(ball.transform.position);
     }
 
     public void SetBall(GameObject detectedBall)
@@ -641,28 +666,4 @@ public class PlayerController : MonoBehaviourPun
         ball = null;
     }
 
-    void RequestOwnership(GameObject obj)
-    {
-        PhotonView photonView = obj.GetComponent<PhotonView>();
-        if (photonView != null && !photonView.IsMine)
-        {
-            Debug.Log($"Requesting ownership of {obj.name}");
-            photonView.TransferOwnership(PhotonNetwork.LocalPlayer);
-        }
-    }
-
-    [PunRPC]
-    void SyncBallState(Vector3 position, Vector3 velocity, Vector3 angularVelocity)
-    {
-        if (ball != null)
-        {
-            Rigidbody ballRb = ball.GetComponent<Rigidbody>();
-            if (ballRb != null)
-            {
-                ball.transform.position = position;
-                ballRb.linearVelocity = velocity;
-                ballRb.angularVelocity = angularVelocity;
-            }
-        }
-    }
 }

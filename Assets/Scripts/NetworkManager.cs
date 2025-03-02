@@ -1,48 +1,58 @@
 using UnityEngine;
-using Photon.Pun;
-using Photon.Realtime;
+using Mirror;
 
-public class NetworkManager : MonoBehaviourPunCallbacks
+public class MyNetworkManager : NetworkManager
 {
-    public GameObject playerPrefab;
-
-    [Space]
-
     public Transform spawnPoints;
-    void Start()
+
+    public override void Start()
     {
-        PhotonNetwork.SendRate = 40;
-        PhotonNetwork.SerializationRate = 40;
-
-        Debug.Log("Creating or joining room...");
-
-        PhotonNetwork.ConnectUsingSettings();
+        // Debug.Log("Attempting to join an existing server...");
+        // StartClient();
+        // Invoke(nameof(CheckClientConnection), 5f); 
     }
 
-    public override void OnConnectedToMaster()
+    void CheckClientConnection()
     {
-        base.OnConnectedToMaster();
-        Debug.Log("Connected to Photon Server!");
-        PhotonNetwork.JoinLobby();
+        if (!NetworkClient.isConnected)
+        {
+            Debug.Log("No existing server found. Starting a new host...");
+            StartHost();
+        }
+        else
+        {
+            Debug.Log("Connected to an existing server.");
+        }
     }
 
-    public override void OnJoinedLobby()
+    public override void OnStartServer()
     {
-        base.OnJoinedLobby();
-        Debug.Log("Joined Lobby!");
-        PhotonNetwork.JoinOrCreateRoom("Room", new RoomOptions { MaxPlayers = 14 }, TypedLobby.Default);
+        base.OnStartServer();
+        Debug.Log("Server started!");
     }
 
-    public override void OnJoinedRoom()
+    public override void OnStartClient()
     {
-        base.OnJoinedRoom();
-        Debug.Log("Joined Room!");
-
-        GameObject _player = PhotonNetwork.Instantiate(playerPrefab.name, spawnPoints.position, spawnPoints.rotation);
-
+        base.OnStartClient();
+        Debug.Log("Client started and connected to server!");
     }
-    void Update()
-    {
 
+    public override void OnServerAddPlayer(NetworkConnectionToClient conn)
+    {
+        Debug.Log("Adding player for connection: " + conn.connectionId);
+        Transform startPos = spawnPoints;
+        GameObject player = Instantiate(playerPrefab, startPos.position, startPos.rotation);
+        NetworkServer.AddPlayerForConnection(conn, player);
+    }
+
+    public override void OnClientDisconnect()
+    {
+        base.OnClientDisconnect();
+
+        if (NetworkClient.isConnected)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
     }
 }

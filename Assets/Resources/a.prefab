@@ -288,6 +288,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc7d151f6918cbf43be0aabb105d7859, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  chargeSpeed: 3
+  maxChargeTime: 0.001
+  mancheteForce: 3
+  playerCamera: {fileID: 0}
+  animationController: {fileID: 0}
 --- !u!1 &6854282264201318970
 GameObject:
   m_ObjectHideFlags: 0
@@ -366,7 +374,6 @@ GameObject:
   - component: {fileID: 5372629180373130969}
   - component: {fileID: 6991256729019146416}
   - component: {fileID: 1967648043634366430}
-  - component: {fileID: -3222418351508321965}
   - component: {fileID: -9218382682595597586}
   m_Layer: 6
   m_Name: a
@@ -427,34 +434,48 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7574313719069592594}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b777ba15e2fd56140a202ede1213080d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
   controller: {fileID: 5372629180373130969}
   playerCamera: {fileID: 3443973501633447756}
   animator: {fileID: 230525893752097690}
+  animationController: {fileID: 0}
   setHitbox: {fileID: 824635084147102357}
-  bumpHitbox: {fileID: 4445657279838821584}
   spikeHitbox: {fileID: 6854282264201318970}
+  blockHitbox: {fileID: 0}
+  diveHitbox: {fileID: 0}
   walkSpeed: 2.7
   runSpeed: 6.5
   gravity: -9.81
   jumpForce: 2
   jumpChargeSpeed: 4.5
-  mancheteForce: 7
   maxHitPower: 20
   setForce: 7
+  handPositionR: {fileID: 0}
+  handPositionL: {fileID: 0}
   powerChargeSpeed: 3
   spikeForce: 10
   maxChargeTime: 2
-  mouseSensitivity: 2
   delayTime: 1.5
   durationOnAir: 1.05
   ballPrefab: {fileID: 3550635221305593683, guid: d21fa2f0cedfa714dbaad4dc4e028c97, type: 3}
-  powerSlider: {fileID: 0}
-  jumpSlider: {fileID: 0}
+  airAcceleration: 2
+  airControlFactor: 0.3
+  attackMouseSlowFactor: 0.5
+  cameraLerpSpeed: 5
+  mouseSensitivity: 2
+  verticalRotation: 0
+  joystickMaxOffset: 50
+  joystickDeadzone: 2
+  joystickMaxRotationSpeed: 90
+  diveForce: 10
+  diveDuration: 1
 --- !u!54 &1967648043634366430
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -482,29 +503,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 126
   m_CollisionDetection: 0
---- !u!114 &-3222418351508321965
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7574313719069592594}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ObservedComponentsFoldoutOpen: 1
-  Group: 0
-  prefixField: -1
-  Synchronization: 3
-  OwnershipTransfer: 0
-  observableSearch: 2
-  ObservedComponents:
-  - {fileID: -9218382682595597586}
-  sceneViewId: 0
-  InstantiationId: 0
-  isRuntimeInstantiated: 0
 --- !u!114 &-9218382682595597586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -517,6 +515,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd6bfba9f0f46764d9f52150ba2b6f1e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
   localScripts:
   - {fileID: 6991256729019146416}
   localObjects: []

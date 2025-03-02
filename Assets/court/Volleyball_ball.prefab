@@ -93,9 +93,6 @@ PrefabInstance:
       addedObject: {fileID: -7452713288514639841}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 18b8bade92e2bb844b4a16824d185348, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 4879373178025711232}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 18b8bade92e2bb844b4a16824d185348, type: 3}
-      insertIndex: -1
       addedObject: {fileID: -7566120071941418290}
   m_SourcePrefab: {fileID: 100100000, guid: 18b8bade92e2bb844b4a16824d185348, type: 3}
 --- !u!1 &3550635221305593683 stripped
@@ -130,27 +127,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &4879373178025711232
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3550635221305593683}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5c150f9f13c36245aa483286bcd1853, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  minHitForce: 5
-  maxHitForce: 20
-  gravityScale: 1
-  bounciness: 0.6
-  radius: 0.2
-  airDensity: 1.2
-  magnusCoefficient: 0.1
-  shadowPrefab: {fileID: 3991532740629627964, guid: 2003686fe9288cb4b9f846863c7e469c, type: 3}
-  markPrefab: {fileID: 2017962444201221932, guid: 0bc5650aec1869f41a8c981da712ee7a, type: 3}
 --- !u!135 &-7566120071941418290
 SphereCollider:
   m_ObjectHideFlags: 0

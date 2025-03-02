@@ -13,11 +13,28 @@ public class VirtualJoystickUI : MonoBehaviour
 
     public float virtualJoystickOffsetX = 0f;
 
-    void Start()
+    void OnEnable()
     {
-        joystickBG = GameObject.FindGameObjectWithTag("JoystickBG").GetComponent<RectTransform>();
-        joystickHandle = GameObject.FindGameObjectWithTag("JoystickHandle").GetComponent<RectTransform>();
+        GameObject bgObject = GameObject.FindGameObjectWithTag("JoystickBG");
+        GameObject handleObject = GameObject.FindGameObjectWithTag("JoystickHandle");
 
+        if (bgObject == null)
+        {
+            Debug.LogError("JoystickBG not found! Check if the tag is set correctly.");
+        }
+        else
+        {
+            joystickBG = bgObject.GetComponent<RectTransform>();
+        }
+
+        if (handleObject == null)
+        {
+            Debug.LogError("JoystickHandle not found! Check if the tag is set correctly.");
+        }
+        else
+        {
+            joystickHandle = handleObject.GetComponent<RectTransform>();
+        }
     }
 
     void Update()

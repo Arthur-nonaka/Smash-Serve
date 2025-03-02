@@ -1,58 +1,48 @@
 using UnityEngine;
-using Photon.Pun;
+using Mirror;
 
-public class PUN2_PlayerSync : MonoBehaviourPun, IPunObservable
+public class Mirror_PlayerSync : NetworkBehaviour
 {
-
-    //List of the scripts that should only be active for the local player (ex. PlayerController, MouseLook etc.)
     public MonoBehaviour[] localScripts;
-    //List of the GameObjects that should only be active for the local player (ex. Camera, AudioListener etc.)
     public GameObject[] localObjects;
-    //Values that will be synced over network
+
     Vector3 latestPos;
     Quaternion latestRot;
 
     void Start()
     {
-        if (photonView.IsMine)
+        if (isLocalPlayer)
         {
-            //Player is local
         }
         else
         {
-            //Player is Remote, deactivate the scripts and object that should only be enabled for the local player
-            for (int i = 0; i < localScripts.Length; i++)
+            foreach (MonoBehaviour script in localScripts)
             {
-                localScripts[i].enabled = false;
+                script.enabled = false;
             }
-            for (int i = 0; i < localObjects.Length; i++)
+            foreach (GameObject obj in localObjects)
             {
-                localObjects[i].SetActive(false);
+                obj.SetActive(false);
             }
         }
     }
 
-    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    public override void OnSerialize(NetworkWriter writer, bool initialState)
     {
-        if (stream.IsWriting)
-        {
-            //We own this player: send the others our data
-            stream.SendNext(transform.position);
-            stream.SendNext(transform.rotation);
-        }
-        else
-        {
-            //Network player, receive data
-            latestPos = (Vector3)stream.ReceiveNext();
-            latestRot = (Quaternion)stream.ReceiveNext();
-        }
+        writer.WriteVector3(transform.position);
+        writer.WriteQuaternion(transform.rotation);
+    }
+
+    public override void OnDeserialize(NetworkReader reader, bool initialState)
+    {
+        latestPos = reader.ReadVector3();
+        latestRot = reader.ReadQuaternion();
     }
 
     void Update()
     {
-        if (!photonView.IsMine)
+        if (!isLocalPlayer)
         {
-            //Update remote player (smooth this, this looks good, at the cost of some accuracy)
             transform.position = Vector3.Lerp(transform.position, latestPos, Time.deltaTime * 5);
             transform.rotation = Quaternion.Lerp(transform.rotation, latestRot, Time.deltaTime * 5);
         }
