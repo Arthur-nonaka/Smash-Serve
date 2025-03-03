@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Mirror;
@@ -33,6 +34,14 @@ public class VolleyballBall : NetworkBehaviour
     private SpriteRenderer shadowRenderer;
 
     public GameObject markPrefab;
+
+    [SyncVar(hook = nameof(OnLastTouchedPlayerChanged))]
+    public string lastPlayerName = "";
+
+    [SyncVar]
+    public bool bumpOccurred = false;
+
+
 
     void Start()
     {
@@ -135,17 +144,28 @@ public class VolleyballBall : NetworkBehaviour
 
         if (collision.gameObject.CompareTag("Ground") && !markCreated)
         {
-            Vector3 hitPoint = collision.contacts[0].point;
-            Collider courtCollider = GameObject.FindGameObjectWithTag("Court").GetComponent<Collider>();
-            bool isIn = courtCollider.bounds.Contains(hitPoint);
-
-            Color markColor = isIn ? Color.green : Color.red;
-
-            CreateMark(hitPoint, markColor);
-
-            markCreated = true;
-            GetComponent<Collider>().enabled = false;
+            StartCoroutine(DelayedGroundCollisionResponse(collision));
         }
+    }
+
+    IEnumerator DelayedGroundCollisionResponse(Collision collision)
+    {
+        Vector3 hitPoint = collision.contacts[0].point;
+        Collider courtCollider = GameObject.FindGameObjectWithTag("Court").GetComponent<Collider>();
+        bool isIn = courtCollider.bounds.Contains(hitPoint);
+        Color markColor = isIn ? Color.green : Color.red;
+        yield return new WaitForSeconds(0.2f);
+
+        if (bumpOccurred)
+        {
+            bumpOccurred = false;
+            yield break;
+        }
+
+
+        CreateMark(hitPoint, markColor);
+        markCreated = true;
+        GetComponent<Collider>().enabled = false;
     }
 
     [Server]
@@ -213,19 +233,19 @@ public class VolleyballBall : NetworkBehaviour
     [Server]
     public void ApplyBump(Vector3 bumpDirection, float hitForce, Vector3 spin)
     {
+        bumpOccurred = true;
+
         float currentTime = Time.time;
         BallState rollbackState = new BallState();
         bool foundValidState = false;
 
-        foreach (BallState state in ballStateBuffer)
+        List<BallState> stateList = new List<BallState>(ballStateBuffer);
+        for (int i = stateList.Count - 1; i >= 0; i--)
         {
-            if (currentTime - state.time <= rewindTimeWindow)
+            if (currentTime - stateList[i].time <= rewindTimeWindow)
             {
-                rollbackState = state;
+                rollbackState = stateList[i];
                 foundValidState = true;
-            }
-            else
-            {
                 break;
             }
         }
@@ -233,8 +253,6 @@ public class VolleyballBall : NetworkBehaviour
         if (foundValidState)
         {
             rb.position = rollbackState.position;
-            rb.linearVelocity = rollbackState.velocity;
-            rb.angularVelocity = rollbackState.angularVelocity;
         }
 
         rb.linearVelocity = Vector3.zero;
@@ -243,6 +261,19 @@ public class VolleyballBall : NetworkBehaviour
         rb.AddForce(bumpDirection * hitForce, ForceMode.Impulse);
         rb.AddTorque(spin, ForceMode.Impulse);
 
+        StartCoroutine(SyncBallStateNextFrame());
+        StartCoroutine(ResetBumpFlag());
+    }
+
+    IEnumerator ResetBumpFlag()
+    {
+        yield return new WaitForSeconds(0.23f);
+        bumpOccurred = false;
+    }
+
+    IEnumerator SyncBallStateNextFrame()
+    {
+        yield return new WaitForFixedUpdate();
         RpcSyncBallState(rb.position, rb.linearVelocity, rb.angularVelocity);
     }
 
@@ -256,5 +287,20 @@ public class VolleyballBall : NetworkBehaviour
             rb.angularVelocity = angularVelocity;
         }
 
+    }
+
+    void OnLastTouchedPlayerChanged(string oldName, string newName)
+    {
+        Debug.Log($"Ball last touched by: {newName}");
+        foreach (PlayerNameTag tag in FindObjectsOfType<PlayerNameTag>())
+        {
+            tag.UpdateColor(newName);
+        }
+    }
+
+    [Server]
+    public void SetLastTouchedPlayer(string playerName)
+    {
+        lastPlayerName = playerName;
     }
 }

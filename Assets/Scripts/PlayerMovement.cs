@@ -75,12 +75,17 @@ public class PlayerController : NetworkBehaviour
     public float diveDuration = 1.0f;
     private bool isDiving = false;
 
+    private PlayerNameTag playerNameTag;
+
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
         virtualMousePos = Vector2.zero;
         int playerLayer = LayerMask.NameToLayer("Player");
         int ballLayer = LayerMask.NameToLayer("Ball");
+
+        if (playerNameTag == null)
+            playerNameTag = GetComponentInChildren<PlayerNameTag>();
 
         blockHitbox.SetActive(false);
 
@@ -93,7 +98,6 @@ public class PlayerController : NetworkBehaviour
             Physics.IgnoreLayerCollision(playerLayer, ballLayer);
         }
 
-        // In Mirror, only the local player should run input and camera code.
         if (!isLocalPlayer)
         {
             enabled = false;
@@ -178,8 +182,6 @@ public class PlayerController : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
-                Debug.Log("Spike performed, RPC.");
-                Debug.Log("Spike Direction: " + position + ", Hit Power: " + velocity + ", Spin: " + angularVelocity);
                 ball.transform.position = position;
                 ballRb.linearVelocity = velocity;
                 ballRb.angularVelocity = angularVelocity;
@@ -419,6 +421,7 @@ public class PlayerController : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
+                CmdNotifyBallTouched();
                 StartCoroutine(ServerHoldAndSetBall(ballRb, power, directionMultiplier, setDirection));
             }
         }
@@ -499,6 +502,7 @@ public class PlayerController : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
+                CmdNotifyBallTouched();
                 Vector3 spin = playerCamera.right * 20f;
 
 
@@ -506,9 +510,6 @@ public class PlayerController : NetworkBehaviour
                 ballRb.angularVelocity = Vector3.zero;
                 ballRb.AddForce(spikeDirection * hitPower, ForceMode.Impulse);
                 ballRb.AddTorque(spin, ForceMode.Impulse);
-
-                Debug.Log("Spike performed, command sent to clients.");
-                Debug.Log("Spike Direction: " + spikeDirection + ", Hit Power: " + hitPower + ", Spin: " + spin);
 
                 StartCoroutine(SyncBallStateNextFrame());
             }
@@ -598,6 +599,17 @@ public class PlayerController : NetworkBehaviour
     //     GameObject newBall = Instantiate(ballPrefab, spawnPosition, Quaternion.identity);
     //     NetworkServer.Spawn(newBall);
     // }
+
+    [Command]
+    void CmdNotifyBallTouched()
+    {
+        string playerName = playerNameTag.GetPlayerName();
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.UpdateBallLastTouched(playerName);
+        }
+    }
 
     IEnumerator DelayedHitboxCheck(GameObject hitbox, Action action, float delay)
     {

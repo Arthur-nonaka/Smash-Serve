@@ -50,37 +50,16 @@ public class DiveHitbox : NetworkBehaviour
         }
     }
 
-    [ClientRpc]
-    void RpcSyncBallState(Vector3 position, Vector3 velocity, Vector3 angularVelocity)
-    {
-        if (ball != null)
-        {
-            Rigidbody ballRb = ball.GetComponent<Rigidbody>();
-            if (ballRb != null)
-            {
-                ball.transform.position = position;
-                ballRb.linearVelocity = velocity;
-                ballRb.angularVelocity = angularVelocity;
-            }
-        }
-    }
-
     [Command]
     void CmdApplyDiveForce(uint ballNetId, float hitPower, Vector3 spin)
     {
         if (NetworkServer.spawned.TryGetValue(ballNetId, out NetworkIdentity identity))
         {
-            GameObject ball = identity.gameObject;
-            Rigidbody ballRb = ball.GetComponent<Rigidbody>();
+            VolleyballBall ball = identity.GetComponent<VolleyballBall>();
 
-            if (ballRb != null)
+            if (ball != null)
             {
-                ballRb.linearVelocity = Vector3.zero;
-                ballRb.angularVelocity = Vector3.zero;
-                ballRb.AddForce(Vector3.up * hitPower, ForceMode.Impulse);
-                ballRb.AddTorque(spin, ForceMode.Impulse);
-
-                RpcSyncBallState(ball.transform.position, ballRb.linearVelocity, ballRb.angularVelocity);
+                ball.ApplyBump(Vector3.up, hitPower, spin);
             }
             else
             {

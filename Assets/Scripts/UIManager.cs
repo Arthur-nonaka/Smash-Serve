@@ -15,6 +15,8 @@ public class UIManager : MonoBehaviour
     public GameObject gameplayPanel;
     public GameObject networkConfigPanel;
 
+    public Text lastPlayerNameText;
+
     void Start()
     {
         hostButton.onClick.AddListener(StartHost);
@@ -62,5 +64,14 @@ public class UIManager : MonoBehaviour
     {
         gameplayPanel.SetActive(false);
         networkConfigPanel.SetActive(true);
+    }
+
+    public void SetLastPlayerName(string name, Color color)
+    {
+        if (lastPlayerNameText != null)
+        {
+            lastPlayerNameText.text = name;
+            lastPlayerNameText.color = color; 
+        }
     }
 }

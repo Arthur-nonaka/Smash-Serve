@@ -22,14 +22,47 @@ public class PlayerNameTag : NetworkBehaviour
         }
     }
 
+    void OnNameChanged(string oldName, string newName)
+    {
+        if (nameText != null)
+            nameText.text = newName;
+    }
+
+    public string GetPlayerName()
+    {
+        return playerName;
+    }
+
     [Command]
     private void CmdSetName(string newName)
     {
         playerName = newName;
     }
 
-    private void OnNameChanged(string oldName, string newName)
+    public void SetName(string newName)
     {
-        nameText.text = newName;
+        playerName = newName;
+        if (nameText != null)
+            nameText.text = newName;
+    }
+
+    public void SetColor(Color color)
+    {
+        if (nameText != null)
+            nameText.color = color;
+    }
+
+    public void UpdateColor(string lastTouchedPlayer)
+    {
+        Debug.Log($"PlayerNameTag '{playerName}' comparing with lastTouchedPlayer '{lastTouchedPlayer}'");
+
+        if (playerName.Equals(lastTouchedPlayer))
+        {
+            // SetColor(Color.red);
+        }
+        else
+        {
+            // SetColor(Color.white);
+        }
     }
 }

@@ -11,6 +11,7 @@ TagManager:
   - jumpSlider
   - JoystickBG
   - JoystickHandle
+  - UIManager
   layers:
   - Default
   - TransparentFX

@@ -26,6 +26,8 @@ public class BumpHitbox : NetworkBehaviour
 
     private NetworkIdentity parentIdentity;
 
+    public PlayerNameTag playerNameTag;
+
     void Start()
     {
         parentIdentity = GetComponentInParent<NetworkIdentity>();
@@ -126,6 +128,7 @@ public class BumpHitbox : NetworkBehaviour
             VolleyballBall ball = identity.GetComponent<VolleyballBall>();
             if (ball != null)
             {
+                CmdNotifyBallTouched();
                 ball.ApplyBump(bumpDirection, hitPower, spin);
             }
             else
@@ -136,6 +139,17 @@ public class BumpHitbox : NetworkBehaviour
         else
         {
             Debug.LogError($"Invalid ballNetId: {ballNetId}. The object may not be spawned or registered in the network.");
+        }
+    }
+
+    [Command]
+    void CmdNotifyBallTouched()
+    {
+        string playerName = playerNameTag.GetPlayerName();
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.UpdateBallLastTouched(playerName);
         }
     }
 }

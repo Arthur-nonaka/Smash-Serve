@@ -993,6 +993,7 @@ MonoBehaviour:
   mancheteForce: 0.5
   playerCamera: {fileID: 2050153043212397920}
   animationController: {fileID: 6542588359314436960}
+  playerNameTag: {fileID: 8245328858519915767}
 --- !u!4 &2737859660780245634 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4128449731803188196, guid: febf9e114437f7c439f0bee85bef9786, type: 3}
