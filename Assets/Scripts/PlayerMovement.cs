@@ -3,6 +3,13 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using Mirror;
+using UnityEngine.VFX;
+public enum Team
+{
+    None,
+    Team1,
+    Team2
+}
 
 public class PlayerController : NetworkBehaviour
 {
@@ -77,6 +84,19 @@ public class PlayerController : NetworkBehaviour
 
     private PlayerNameTag playerNameTag;
 
+    [Header("VFX Settings")]
+    private GameObject vfxManager;
+
+    [Header("Team")]
+    [SyncVar(hook = nameof(OnTeamChanged))]
+    public Team team = Team.None;
+
+    private UIManager UIManager;
+
+
+
+
+
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -107,6 +127,9 @@ public class PlayerController : NetworkBehaviour
         virtualJoystickUI = FindFirstObjectByType<VirtualJoystickUI>();
         diveHitbox.SetActive(false);
 
+        vfxManager = GameObject.FindGameObjectWithTag("VFXManager");
+        UIManager = GameObject.FindGameObjectWithTag("UIManager").GetComponent<UIManager>();
+
         powerSlider = GameObject.FindGameObjectWithTag("powerSlider").GetComponent<Slider>();
         jumpSlider = GameObject.FindGameObjectWithTag("jumpSlider").GetComponent<Slider>();
 
@@ -117,6 +140,42 @@ public class PlayerController : NetworkBehaviour
         jumpSlider.minValue = 0;
         jumpSlider.maxValue = 100;
         jumpSlider.value = 0;
+    }
+
+    public override void OnStartServer()
+    {
+        base.OnStartServer();
+        TeamManager.Instance.RegisterPlayer(this);
+    }
+
+    public override void OnStopServer()
+    {
+        base.OnStopServer();
+        TeamManager.Instance.UnregisterPlayer(this);
+    }
+
+    [Command]
+    public void CmdSetTeam(Team newTeam)
+    {
+        team = newTeam;
+        TeamManager.Instance.SetPlayerTeam(this, team);
+        TargetShowMessage(connectionToClient, $"You are now on {team}.", Color.gray);
+        UIManager.HideTeamsPanel();
+        Debug.Log($"Player {netId} set to team {team}");
+    }
+
+    void OnTeamChanged(Team oldTeam, Team newTeam)
+    {
+        Debug.Log($"Team changed from {oldTeam} to {newTeam}");
+    }
+
+    [TargetRpc]
+    void TargetShowMessage(NetworkConnection target, string message, Color color)
+    {
+        if (NotificationManager.Instance != null)
+        {
+            NotificationManager.Instance.QueueNotification(message, color);
+        }
     }
 
     void Update()
@@ -371,6 +430,7 @@ public class PlayerController : NetworkBehaviour
         {
             if (!stopJump)
             {
+                vfxManager.GetComponent<VFXManager>().PlayJumpVFX(transform.position + Vector3.up * 1.8f);
                 StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsJumping", true, 0.5f));
                 float jumpPower = jumpForce * (chargeTime / maxChargeTime + 0.5f);
                 velocity.y = Mathf.Sqrt(jumpPower * -2f * gravity);
@@ -601,13 +661,12 @@ public class PlayerController : NetworkBehaviour
     // }
 
     [Command]
-    void CmdNotifyBallTouched()
+    public void CmdNotifyBallTouched()
     {
-        string playerName = playerNameTag.GetPlayerName();
 
-        if (GameManager.Instance != null)
+        if (TeamManager.Instance != null)
         {
-            GameManager.Instance.UpdateBallLastTouched(playerName);
+            TeamManager.Instance.UpdateBallLastTouched(this);
         }
     }
 

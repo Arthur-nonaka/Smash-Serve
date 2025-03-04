@@ -12,6 +12,8 @@ TagManager:
   - JoystickBG
   - JoystickHandle
   - UIManager
+  - VFXManager
+  - OptionsManager
   layers:
   - Default
   - TransparentFX

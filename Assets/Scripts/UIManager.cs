@@ -14,14 +14,29 @@ public class UIManager : MonoBehaviour
     public NetworkManager networkManager;
     public GameObject gameplayPanel;
     public GameObject networkConfigPanel;
+    public GameObject teamPanel;
+    public GameObject configPanel;
+    public GameObject optionsPanel;
 
     public Text lastPlayerNameText;
+
+    private OptionsManager optionsManager;
 
     void Start()
     {
         hostButton.onClick.AddListener(StartHost);
         clientButton.onClick.AddListener(StartClient);
+        gameplayPanel.SetActive(false);
+        networkConfigPanel.SetActive(false);
+        teamPanel.SetActive(false);
+        optionsPanel.SetActive(false);
+
         ShowNetworkConfigPanel();
+
+    }
+
+    void Update()
+    {
     }
 
     void StartHost()
@@ -58,12 +73,40 @@ public class UIManager : MonoBehaviour
     {
         gameplayPanel.SetActive(true);
         networkConfigPanel.SetActive(false);
+        teamPanel.SetActive(false);
     }
 
     public void ShowNetworkConfigPanel()
     {
         gameplayPanel.SetActive(false);
         networkConfigPanel.SetActive(true);
+        teamPanel.SetActive(false);
+    }
+
+    public void ShowOptionsPanel()
+    {
+        optionsPanel.SetActive(true);
+        networkConfigPanel.SetActive(false);
+        teamPanel.SetActive(false);
+    }
+
+    public void HideTeamsPanel()
+    {
+        optionsManager = GameObject.FindGameObjectWithTag("OptionsManager").GetComponent<OptionsManager>();
+        optionsManager.TurnBack();
+    }
+
+    public void HideOptionsPanel()
+    {
+        optionsPanel.SetActive(false);
+        teamPanel.SetActive(false);
+        configPanel.SetActive(false);
+    }
+
+    public void ShowTeamPanel()
+    {
+        networkConfigPanel.SetActive(false);
+        teamPanel.SetActive(true);
     }
 
     public void SetLastPlayerName(string name, Color color)
@@ -71,7 +114,8 @@ public class UIManager : MonoBehaviour
         if (lastPlayerNameText != null)
         {
             lastPlayerNameText.text = name;
-            lastPlayerNameText.color = color; 
+            lastPlayerNameText.color = color;
         }
     }
+
 }

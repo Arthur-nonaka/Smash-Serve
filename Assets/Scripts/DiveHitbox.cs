@@ -12,6 +12,7 @@ public class DiveHitbox : NetworkBehaviour
     private Collider hitboxCollider;
 
     private NetworkIdentity parentIdentity;
+    private PlayerController playerController;
 
     void Start()
     {
@@ -21,13 +22,14 @@ public class DiveHitbox : NetworkBehaviour
             Debug.LogError("No NetworkIdentity found on parent object.");
         }
         hitboxCollider = GetComponent<Collider>();
+        playerController = FindFirstObjectByType<PlayerController>();
     }
 
     void Update()
     {
     }
 
-    private void OnTriggerStay(Collider other)
+    private void OnTriggerEnter(Collider other)
     {
         if (!isLocalPlayer) return;
 
@@ -59,6 +61,7 @@ public class DiveHitbox : NetworkBehaviour
 
             if (ball != null)
             {
+                playerController.CmdNotifyBallTouched();
                 ball.ApplyBump(Vector3.up, hitPower, spin);
             }
             else
@@ -70,7 +73,5 @@ public class DiveHitbox : NetworkBehaviour
         {
             Debug.LogError($"Invalid ballNetId: {ballNetId}. The object may not be spawned or registered in the network.");
         }
-
-
     }
 }

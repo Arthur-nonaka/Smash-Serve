@@ -71,6 +71,15 @@ public class VolleyballBall : NetworkBehaviour
         }
     }
 
+    public override void OnStartServer()
+    {
+        base.OnStartServer();
+        if (TeamManager.Instance != null)
+        {
+            TeamManager.Instance.RegisterBall(this);
+        }
+    }
+
     void Update()
     {
         UpdateShadow();
@@ -161,6 +170,16 @@ public class VolleyballBall : NetworkBehaviour
             bumpOccurred = false;
             yield break;
         }
+
+        if (hitPoint.x > 0)
+        {
+            TeamManager.Instance.BallFellOnGround(Team.Team1);
+        }
+        else
+        {
+            TeamManager.Instance.BallFellOnGround(Team.Team2);
+        }
+
 
 
         CreateMark(hitPoint, markColor);
@@ -302,5 +321,22 @@ public class VolleyballBall : NetworkBehaviour
     public void SetLastTouchedPlayer(string playerName)
     {
         lastPlayerName = playerName;
+    }
+
+    [Server]
+    public void CmdResetBall()
+    {
+        if (gameObject.scene.IsValid())
+        {
+            GetComponent<Collider>().enabled = false;
+            StartCoroutine(DestroyBallAfterTime(0.7f));
+        }
+    }
+
+    IEnumerator DestroyBallAfterTime(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        NetworkServer.Destroy(gameObject);
+        RpcDestroyShadow();
     }
 }

@@ -128,8 +128,15 @@ public class BumpHitbox : NetworkBehaviour
             VolleyballBall ball = identity.GetComponent<VolleyballBall>();
             if (ball != null)
             {
-                CmdNotifyBallTouched();
-                ball.ApplyBump(bumpDirection, hitPower, spin);
+                if (playerMovement != null)
+                {
+                    playerMovement.CmdNotifyBallTouched();
+                    ball.ApplyBump(bumpDirection, hitPower, spin);
+                }
+                else
+                {
+                    Debug.LogError("PlayerController not found on the player object.");
+                }
             }
             else
             {
@@ -139,17 +146,6 @@ public class BumpHitbox : NetworkBehaviour
         else
         {
             Debug.LogError($"Invalid ballNetId: {ballNetId}. The object may not be spawned or registered in the network.");
-        }
-    }
-
-    [Command]
-    void CmdNotifyBallTouched()
-    {
-        string playerName = playerNameTag.GetPlayerName();
-
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.UpdateBallLastTouched(playerName);
         }
     }
 }
