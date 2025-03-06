@@ -914,7 +914,10 @@ MonoBehaviour:
   servingTeam: 1
   currentTouches: 0
   lastTouchPlayerNetId: 0
+  designatedServerNetId: 0
   players: []
+  team1Players: []
+  team2Players: []
 --- !u!4 &784091980
 Transform:
   m_ObjectHideFlags: 0

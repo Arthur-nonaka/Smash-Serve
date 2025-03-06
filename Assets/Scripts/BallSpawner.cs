@@ -22,6 +22,11 @@ public class BallSpawner : NetworkBehaviour
     [Command]
     void CmdSpawnBall()
     {
+        if (TeamManager.Instance.designatedServerNetId != netId && TeamManager.Instance.designatedServerNetId != 0)
+        {
+            Debug.Log("Only the designated server can spawn the ball.");
+            return;
+        }
         Vector3 spawnPosition = transform.position + Vector3.up * spawnHeight;
         GameObject ball = Instantiate(ballPrefab, spawnPosition, Quaternion.identity);
         NetworkServer.Spawn(ball);

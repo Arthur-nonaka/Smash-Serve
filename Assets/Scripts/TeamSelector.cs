@@ -32,7 +32,6 @@ public class TeamManager : NetworkBehaviour
 
     [Header("Game Rules")]
     public int maxPlayers = 20;
-
     public int maxPlayersPerTeam = 6;
     public int maxTouches = 3;
 
@@ -44,8 +43,13 @@ public class TeamManager : NetworkBehaviour
 
     [SyncVar]
     public uint lastTouchPlayerNetId = 0;
+    [SyncVar]
+    public uint designatedServerNetId = 0;
 
     public List<PlayerController> players = new List<PlayerController>();
+
+    public List<PlayerController> team1Players = new List<PlayerController>();
+    public List<PlayerController> team2Players = new List<PlayerController>();
     void Awake()
     {
         if (Instance != null)
@@ -76,6 +80,15 @@ public class TeamManager : NetworkBehaviour
             players.Remove(player);
             Debug.Log($"Player {player.netId} unregistered.");
         }
+
+        if (player.team == Team.Team1 && team1Players.Contains(player))
+        {
+            team1Players.Remove(player);
+        }
+        else if (player.team == Team.Team2 && team2Players.Contains(player))
+        {
+            team2Players.Remove(player);
+        }
     }
 
     [Server]
@@ -99,6 +112,12 @@ public class TeamManager : NetworkBehaviour
         {
             Debug.Log($"Ball touched by player {player.netId}. Current touches: {currentTouches}");
         }
+    }
+
+    [Server]
+    public void UpdateBallLastTouchedBlock(PlayerController player)
+    {
+        lastTouchPlayerNetId = player.netId;
     }
 
     [Server]
@@ -143,13 +162,37 @@ public class TeamManager : NetworkBehaviour
         if (winningTeam == Team.Team1)
         {
             score1++;
+            if (team1Players.Count > 0)
+            {
+                designatedServerNetId = team1Players[0].netId;
+                PlayerController server = team1Players[0];
+                team1Players.RemoveAt(0);
+                team1Players.Add(server);
+            }
+        }
+        else if (winningTeam == Team.Team2)
+        {
+            score2++;
+            if (team2Players.Count > 0)
+            {
+                designatedServerNetId = team2Players[0].netId;
+                PlayerController server = team2Players[0];
+                team2Players.RemoveAt(0);
+                team2Players.Add(server);
+            }
         }
         else
         {
-            score2++;
+            designatedServerNetId = 0;
+        }
+        PlayerController designatedServer = players.Find(p => p.netId == designatedServerNetId);
+        if (designatedServer != null)
+        {
+            NotificationManager.Instance.QueueNotification($"Server: Player {designatedServer.netId}", Color.gray);
         }
         UpdateScoreUI();
         ResetTouches();
+        ball = null;
         Debug.Log($"Rally ended. Winning team: {winningTeam}. New serving team: {servingTeam}");
     }
 
@@ -184,6 +227,7 @@ public class TeamManager : NetworkBehaviour
                 return;
             }
             player.transform.position = team1SpawnPoints[Random.Range(0, team1SpawnPoints.Count)].position;
+            team1Players.Add(player);
         }
         else if (team == Team.Team2)
         {
@@ -193,6 +237,7 @@ public class TeamManager : NetworkBehaviour
                 return;
             }
             player.transform.position = team2SpawnPoints[Random.Range(0, team2SpawnPoints.Count)].position;
+            team2Players.Add(player);
         }
         Debug.Log($"Player {player.netId} assigned to team {team}");
     }
@@ -201,7 +246,10 @@ public class TeamManager : NetworkBehaviour
     [Server]
     public void RegisterBall(VolleyballBall newBall)
     {
-        ball = newBall;
-        Debug.Log($"Ball registered in TeamManager: {ball.netId}");
+        if (ball == null)
+        {
+            ball = newBall;
+            Debug.Log($"Ball registered in TeamManager: {ball.netId}");
+        }
     }
 }

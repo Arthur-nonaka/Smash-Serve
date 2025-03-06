@@ -61,7 +61,7 @@ public class DiveHitbox : NetworkBehaviour
 
             if (ball != null)
             {
-                playerController.CmdNotifyBallTouched();
+                playerController.CmdNotifyBallTouched(false);
                 ball.ApplyBump(Vector3.up, hitPower, spin);
             }
             else

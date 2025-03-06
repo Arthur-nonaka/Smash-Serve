@@ -130,7 +130,7 @@ public class BumpHitbox : NetworkBehaviour
             {
                 if (playerMovement != null)
                 {
-                    playerMovement.CmdNotifyBallTouched();
+                    playerMovement.CmdNotifyBallTouched(false);
                     ball.ApplyBump(bumpDirection, hitPower, spin);
                 }
                 else

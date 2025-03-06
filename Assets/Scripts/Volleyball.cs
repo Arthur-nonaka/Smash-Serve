@@ -171,14 +171,22 @@ public class VolleyballBall : NetworkBehaviour
             yield break;
         }
 
-        if (hitPoint.x > 0)
+        if (isIn)
         {
-            TeamManager.Instance.BallFellOnGround(Team.Team1);
+            if (hitPoint.x > 0)
+            {
+                TeamManager.Instance.BallFellOnGround(Team.Team1);
+            }
+            else
+            {
+                TeamManager.Instance.BallFellOnGround(Team.Team2);
+            }
         }
         else
         {
-            TeamManager.Instance.BallFellOnGround(Team.Team2);
+            TeamManager.Instance.BallFellOnGround(Team.None);
         }
+
 
 
 
@@ -329,14 +337,19 @@ public class VolleyballBall : NetworkBehaviour
         if (gameObject.scene.IsValid())
         {
             GetComponent<Collider>().enabled = false;
-            StartCoroutine(DestroyBallAfterTime(0.7f));
+            StartCoroutine(DestroyBallAfterTime(2.1f));
         }
     }
 
     IEnumerator DestroyBallAfterTime(float delay)
     {
         yield return new WaitForSeconds(delay);
-        NetworkServer.Destroy(gameObject);
+        Debug.Log("Destroying ball on server");
         RpcDestroyShadow();
+        if (shadow != null)
+        {
+            Destroy(shadow);
+        }
+        NetworkServer.Destroy(gameObject);
     }
 }

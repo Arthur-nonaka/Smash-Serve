@@ -22,6 +22,7 @@ public class PlayerController : NetworkBehaviour
     public GameObject setHitbox;
     public GameObject spikeHitbox;
     public GameObject blockHitbox;
+    public GameObject blockHitboxPivot;
     public GameObject diveHitbox;
     public float walkSpeed = 5f;
     public float runSpeed = 10f;
@@ -93,6 +94,13 @@ public class PlayerController : NetworkBehaviour
 
     private UIManager UIManager;
 
+    [Header("Block Settings")]
+    public PhysicsMaterial softMaterial;
+    public PhysicsMaterial hardMaterial;
+
+    public float blockHardness { get; private set; }
+
+
 
 
 
@@ -124,7 +132,7 @@ public class PlayerController : NetworkBehaviour
             playerCamera.gameObject.SetActive(false);
         }
 
-        virtualJoystickUI = FindFirstObjectByType<VirtualJoystickUI>();
+        virtualJoystickUI = FindObjectOfType<VirtualJoystickUI>();
         diveHitbox.SetActive(false);
 
         vfxManager = GameObject.FindGameObjectWithTag("VFXManager");
@@ -160,8 +168,15 @@ public class PlayerController : NetworkBehaviour
         team = newTeam;
         TeamManager.Instance.SetPlayerTeam(this, team);
         TargetShowMessage(connectionToClient, $"You are now on {team}.", Color.gray);
-        UIManager.HideTeamsPanel();
+        TargetHideTeamsPanel(connectionToClient);
         Debug.Log($"Player {netId} set to team {team}");
+    }
+
+    [TargetRpc]
+    void TargetHideTeamsPanel(NetworkConnection target)
+    {
+
+        UIManager.HideTeamsPanel();
     }
 
     void OnTeamChanged(Team oldTeam, Team newTeam)
@@ -274,6 +289,7 @@ public class PlayerController : NetworkBehaviour
             CmdActivateBlock();
             animator.SetBool("IsBlocking", true);
             wasBlocking = true;
+            UpdateBlockProperties();
         }
         if ((Input.GetMouseButtonUp(1) || GetIsGrounded()) && wasBlocking)
         {
@@ -282,6 +298,40 @@ public class PlayerController : NetworkBehaviour
             blockHitbox.SetActive(false);
             wasBlocking = false;
         }
+    }
+
+    void UpdateBlockProperties()
+    {
+        if (blockHitbox == null || playerCamera == null)
+            return;
+
+        Collider blockCollider = blockHitbox.GetComponent<Collider>();
+        if (blockCollider != null)
+        {
+            blockCollider.material = blockHardness < 1.0f ? softMaterial : hardMaterial;
+        }
+
+
+
+        float pitch = playerCamera.eulerAngles.x;
+        if (pitch > 180f)
+            pitch -= 360f;
+        pitch = Mathf.Clamp(pitch, -30f, 30f);
+
+        float maxScale = 1.2f;
+        float minScale = 0.7f;
+        float t = Mathf.InverseLerp(-30f, 30f, pitch);
+        float newScale = Mathf.Lerp(maxScale, minScale, t);
+        blockHitbox.transform.localScale = new Vector3(newScale, 1.6f, 0.3f);
+
+        blockHitboxPivot.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+
+
+        blockHardness = Mathf.Lerp(0.5f, 1.5f, t);
+
+        if (!blockHitbox.activeSelf)
+            blockHitbox.SetActive(true);
+
     }
 
     [Command]
@@ -481,7 +531,7 @@ public class PlayerController : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
-                CmdNotifyBallTouched();
+                CmdNotifyBallTouched(false);
                 StartCoroutine(ServerHoldAndSetBall(ballRb, power, directionMultiplier, setDirection));
             }
         }
@@ -562,7 +612,7 @@ public class PlayerController : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
-                CmdNotifyBallTouched();
+                CmdNotifyBallTouched(false);
                 Vector3 spin = playerCamera.right * 20f;
 
 
@@ -661,12 +711,19 @@ public class PlayerController : NetworkBehaviour
     // }
 
     [Command]
-    public void CmdNotifyBallTouched()
+    public void CmdNotifyBallTouched(bool isBlock)
     {
 
         if (TeamManager.Instance != null)
         {
-            TeamManager.Instance.UpdateBallLastTouched(this);
+            if (isBlock)
+            {
+                TeamManager.Instance.UpdateBallLastTouchedBlock(this);
+            }
+            else
+            {
+                TeamManager.Instance.UpdateBallLastTouched(this);
+            }
         }
     }
 
