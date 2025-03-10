@@ -48,8 +48,14 @@ public class TeamManager : NetworkBehaviour
 
     public List<PlayerController> players = new List<PlayerController>();
 
+    [Header("Match Settings")]
+    [SyncVar]
+    public bool matchActive = false;
+
     public List<PlayerController> team1Players = new List<PlayerController>();
     public List<PlayerController> team2Players = new List<PlayerController>();
+
+
     void Awake()
     {
         if (Instance != null)
@@ -92,6 +98,64 @@ public class TeamManager : NetworkBehaviour
     }
 
     [Server]
+    public bool AreTeamsReady()
+    {
+        return team1Players.Count > 0 && team2Players.Count > 0;
+    }
+
+    [Server]
+    public void StartMatch()
+    {
+        if (!AreTeamsReady())
+        {
+            Debug.LogWarning("Cannot start match: both teams must have at least one player.");
+            return;
+        }
+
+        score1 = 0;
+        score2 = 0;
+
+        matchActive = true;
+        UpdateScoreUI();
+        TeleportPlayersToSpawnPoints();
+
+        Debug.Log("Match started!");
+    }
+
+    [Server]
+    public void TeleportPlayersToSpawnPoints()
+    {
+        foreach (PlayerController player in team1Players)
+        {
+            Vector3 spawnPosition = Vector3.zero;
+            if (team1SpawnPoints.Count > 0)
+            {
+                spawnPosition = team1SpawnPoints[Random.Range(0, team1SpawnPoints.Count)].position;
+            }
+            else
+            {
+                Debug.LogWarning("No spawn points defined for Team1.");
+            }
+            player.RpcTeleport(spawnPosition);
+        }
+
+        foreach (PlayerController player in team2Players)
+        {
+            Vector3 spawnPosition = Vector3.zero;
+            if (team2SpawnPoints.Count > 0)
+            {
+                spawnPosition = team2SpawnPoints[Random.Range(0, team2SpawnPoints.Count)].position;
+            }
+            else
+            {
+                Debug.LogWarning("No spawn points defined for Team2.");
+            }
+            player.RpcTeleport(spawnPosition);
+        }
+
+    }
+
+    [Server]
     public void UpdateBallLastTouched(PlayerController player)
     {
         if (lastTouchPlayerNetId == player.netId)
@@ -123,6 +187,11 @@ public class TeamManager : NetworkBehaviour
     [Server]
     public void BallFellOnGround(Team team)
     {
+        if (!matchActive)
+        {
+            return;
+        }
+
         if (team == Team.Team1)
         {
             EndRally(Team.Team2);
@@ -219,6 +288,7 @@ public class TeamManager : NetworkBehaviour
     public void SetPlayerTeam(PlayerController player, Team team)
     {
         player.team = team;
+        Vector3 spawnPosition = Vector3.zero;
         if (team == Team.Team1)
         {
             if (players.FindAll(p => p.team == Team.Team1).Count >= maxPlayersPerTeam)
@@ -226,7 +296,7 @@ public class TeamManager : NetworkBehaviour
                 Debug.LogWarning("Team 1 is full.");
                 return;
             }
-            player.transform.position = team1SpawnPoints[Random.Range(0, team1SpawnPoints.Count)].position;
+            spawnPosition = team1SpawnPoints[Random.Range(0, team1SpawnPoints.Count)].position;
             team1Players.Add(player);
         }
         else if (team == Team.Team2)
@@ -236,9 +306,10 @@ public class TeamManager : NetworkBehaviour
                 Debug.LogWarning("Team 2 is full.");
                 return;
             }
-            player.transform.position = team2SpawnPoints[Random.Range(0, team2SpawnPoints.Count)].position;
+            spawnPosition = team2SpawnPoints[Random.Range(0, team2SpawnPoints.Count)].position;
             team2Players.Add(player);
         }
+        player.RpcTeleport(spawnPosition);
         Debug.Log($"Player {player.netId} assigned to team {team}");
     }
 

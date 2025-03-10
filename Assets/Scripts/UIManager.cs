@@ -16,6 +16,8 @@ public class UIManager : MonoBehaviour
     public GameObject networkConfigPanel;
     public GameObject teamPanel;
     public GameObject configPanel;
+    public GameObject firstPanel;
+    public GameObject matchPanel;
     public GameObject optionsPanel;
 
     public Text lastPlayerNameText;
@@ -30,6 +32,7 @@ public class UIManager : MonoBehaviour
         networkConfigPanel.SetActive(false);
         teamPanel.SetActive(false);
         optionsPanel.SetActive(false);
+        matchPanel.SetActive(false);
 
         ShowNetworkConfigPanel();
 
@@ -41,20 +44,24 @@ public class UIManager : MonoBehaviour
 
     void StartHost()
     {
-        SetPlayerName();
-        networkManager.StartHost();
-        ShowGameplayPanel();
+        if (SetPlayerName())
+        {
+            networkManager.StartHost();
+            ShowGameplayPanel();
+        }
     }
 
     void StartClient()
     {
-        SetPlayerName();
-        networkManager.networkAddress = ipInput.text;
-        networkManager.StartClient();
-        ShowGameplayPanel();
+        if (SetPlayerName())
+        {
+            networkManager.networkAddress = ipInput.text;
+            networkManager.StartClient();
+            ShowGameplayPanel();
+        }
     }
 
-    void SetPlayerName()
+    bool SetPlayerName()
     {
         string playerName = playerNameInput.text;
         if (!string.IsNullOrEmpty(playerName))
@@ -62,10 +69,12 @@ public class UIManager : MonoBehaviour
             PlayerPrefs.SetString("PlayerName", playerName);
             PlayerPrefs.Save();
             Debug.Log("Player Name Set: " + playerName);
+            return true;
         }
         else
         {
             Debug.LogWarning("Player Name is empty!");
+            return false;
         }
     }
 
@@ -74,6 +83,7 @@ public class UIManager : MonoBehaviour
         gameplayPanel.SetActive(true);
         networkConfigPanel.SetActive(false);
         teamPanel.SetActive(false);
+        optionsPanel.SetActive(false);
     }
 
     public void ShowNetworkConfigPanel()
@@ -88,6 +98,7 @@ public class UIManager : MonoBehaviour
         optionsPanel.SetActive(true);
         networkConfigPanel.SetActive(false);
         teamPanel.SetActive(false);
+        matchPanel.SetActive(false);
     }
 
     public void HideTeamsPanel()
@@ -99,8 +110,10 @@ public class UIManager : MonoBehaviour
     public void HideOptionsPanel()
     {
         optionsPanel.SetActive(false);
+        matchPanel.SetActive(false);
         teamPanel.SetActive(false);
         configPanel.SetActive(false);
+        firstPanel.SetActive(true);
     }
 
     public void ShowTeamPanel()

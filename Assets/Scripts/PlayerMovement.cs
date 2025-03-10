@@ -100,11 +100,6 @@ public class PlayerController : NetworkBehaviour
 
     public float blockHardness { get; private set; }
 
-
-
-
-
-
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -480,7 +475,7 @@ public class PlayerController : NetworkBehaviour
         {
             if (!stopJump)
             {
-                vfxManager.GetComponent<VFXManager>().PlayJumpVFX(transform.position + Vector3.up * 1.8f);
+                CmdPerformJump();
                 StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsJumping", true, 0.5f));
                 float jumpPower = jumpForce * (chargeTime / maxChargeTime + 0.5f);
                 velocity.y = Mathf.Sqrt(jumpPower * -2f * gravity);
@@ -500,6 +495,12 @@ public class PlayerController : NetworkBehaviour
 
         velocity.y += gravity * Time.deltaTime;
         controller.Move(new Vector3(0, velocity.y, 0) * Time.deltaTime);
+    }
+
+    [Command]
+    public void CmdPerformJump()
+    {
+        vfxManager.GetComponent<VFXManager>().RpcPlayJumpVFX(transform.position + Vector3.up * 1.2f);
     }
 
     public bool GetIsGrounded()
@@ -532,6 +533,8 @@ public class PlayerController : NetworkBehaviour
             if (ballRb != null)
             {
                 CmdNotifyBallTouched(false);
+                NetworkIdentity identity = ball.GetComponent<NetworkIdentity>();
+                RpcPlaySetSound(identity.netId);
                 StartCoroutine(ServerHoldAndSetBall(ballRb, power, directionMultiplier, setDirection));
             }
         }
@@ -612,7 +615,10 @@ public class PlayerController : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
+                vfxManager.GetComponent<VFXManager>().RpcPlaySpikeVFX(ball.transform.position);
                 CmdNotifyBallTouched(false);
+                NetworkIdentity identity = ball.GetComponent<NetworkIdentity>();
+                RpcPlaySpikeSound(identity.netId, hitPower);
                 Vector3 spin = playerCamera.right * 20f;
 
 
@@ -713,9 +719,13 @@ public class PlayerController : NetworkBehaviour
     [Command]
     public void CmdNotifyBallTouched(bool isBlock)
     {
-
         if (TeamManager.Instance != null)
         {
+            if (!TeamManager.Instance.matchActive)
+            {
+                return;
+            }
+
             if (isBlock)
             {
                 TeamManager.Instance.UpdateBallLastTouchedBlock(this);
@@ -770,6 +780,49 @@ public class PlayerController : NetworkBehaviour
 
         return hitboxCollider.bounds.Contains(ball.transform.position);
     }
+
+    [ClientRpc]
+    void RpcPlaySetSound(uint audioSourceNetId)
+    {
+        NetworkIdentity identity = NetworkClient.spawned[audioSourceNetId];
+        if (identity != null)
+        {
+            AudioSource audioSource = identity.GetComponent<AudioSource>();
+            if (audioSource != null)
+            {
+                SoundManager.Instance.PlaySound(SoundManager.Instance.setSound, audioSource);
+            }
+        }
+    }
+
+    [ClientRpc]
+    void RpcPlaySpikeSound(uint audioSourceNetId, float hitPower)
+    {
+        float volume = Mathf.Clamp(hitPower / 20f, 0.1f, 1f);
+
+        NetworkIdentity identity = NetworkClient.spawned[audioSourceNetId];
+        if (identity != null)
+        {
+            AudioSource audioSource = identity.GetComponent<AudioSource>();
+            if (audioSource != null)
+            {
+                audioSource.volume = volume;
+                SoundManager.Instance.PlaySound(SoundManager.Instance.spikeSound, audioSource);
+            }
+        }
+    }
+
+    [ClientRpc]
+    public void RpcTeleport(Vector3 newPosition)
+    {
+        transform.position = newPosition;
+    }
+
+    public string GetPlayerName()
+    {
+        return playerNameTag.GetPlayerName();
+    }
+
 
     public void SetBall(GameObject detectedBall)
     {

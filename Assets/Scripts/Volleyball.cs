@@ -153,6 +153,7 @@ public class VolleyballBall : NetworkBehaviour
 
         if (collision.gameObject.CompareTag("Ground") && !markCreated)
         {
+            RpcPlayGroundSound();
             StartCoroutine(DelayedGroundCollisionResponse(collision));
         }
     }
@@ -287,6 +288,7 @@ public class VolleyballBall : NetworkBehaviour
 
         rb.AddForce(bumpDirection * hitForce, ForceMode.Impulse);
         rb.AddTorque(spin, ForceMode.Impulse);
+        RpcPlayBumpSound();
 
         StartCoroutine(SyncBallStateNextFrame());
         StartCoroutine(ResetBumpFlag());
@@ -351,5 +353,21 @@ public class VolleyballBall : NetworkBehaviour
             Destroy(shadow);
         }
         NetworkServer.Destroy(gameObject);
+    }
+
+
+    [ClientRpc]
+    void RpcPlayBumpSound()
+    {
+        AudioSource audioSource = GetComponent<AudioSource>();
+        SoundManager.Instance.PlaySound(SoundManager.Instance.bumpSound, audioSource);
+    }
+
+
+    [ClientRpc]
+    void RpcPlayGroundSound()
+    {
+        AudioSource audioSource = GetComponent<AudioSource>();
+        SoundManager.Instance.PlaySound(SoundManager.Instance.groundSound, audioSource);
     }
 }

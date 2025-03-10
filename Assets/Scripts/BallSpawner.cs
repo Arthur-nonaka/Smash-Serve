@@ -13,20 +13,25 @@ public class BallSpawner : NetworkBehaviour
             CmdSpawnBall();
         }
 
-        if (isLocalPlayer && Input.GetKeyDown(KeyCode.V))
-        {
-            CmdSpawnBallVelocity();
-        }
+        // if (isLocalPlayer && Input.GetKeyDown(KeyCode.V))
+        // {
+        //     CmdSpawnBallVelocity();
+        // }
     }
 
     [Command]
     void CmdSpawnBall()
     {
-        if (TeamManager.Instance.designatedServerNetId != netId && TeamManager.Instance.designatedServerNetId != 0)
+        if (TeamManager.Instance.matchActive)
         {
-            Debug.Log("Only the designated server can spawn the ball.");
-            return;
+            if (TeamManager.Instance.designatedServerNetId != netId && TeamManager.Instance.designatedServerNetId != 0)
+            {
+                Debug.Log("Only the designated server can spawn the ball.");
+                return;
+            }
         }
+
+
         Vector3 spawnPosition = transform.position + Vector3.up * spawnHeight;
         GameObject ball = Instantiate(ballPrefab, spawnPosition, Quaternion.identity);
         NetworkServer.Spawn(ball);
