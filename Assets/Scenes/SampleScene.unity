@@ -1451,6 +1451,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tela
       objectReference: {fileID: 0}
+    - target: {fileID: 1858113502763336683, guid: ea3f6abda0164304fa8e85d56815945e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -100
+      objectReference: {fileID: 0}
     - target: {fileID: 2195292218351885120, guid: ea3f6abda0164304fa8e85d56815945e, type: 3}
       propertyPath: matchPanel
       value: 
@@ -1605,6 +1609,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 65585423621229293, guid: ea3f6abda0164304fa8e85d56815945e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1624923781}
+    - targetCorrespondingSourceObject: {fileID: 6206375378357137418, guid: ea3f6abda0164304fa8e85d56815945e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1646645599}
   m_SourcePrefab: {fileID: 100100000, guid: ea3f6abda0164304fa8e85d56815945e, type: 3}
 --- !u!1 &596198195
 GameObject:
@@ -3994,6 +4001,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sceneId: 1868265854
+  _assetId: 573198649
+  serverOnly: 0
+  visibility: 0
+  hasSpawned: 0
+--- !u!1 &1646645594 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6206375378357137418, guid: ea3f6abda0164304fa8e85d56815945e, type: 3}
+  m_PrefabInstance: {fileID: 585899802}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1646645599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1646645594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b91ecbcc199f4492b9a91e820070131, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneId: 1734909468
   _assetId: 573198649
   serverOnly: 0
   visibility: 0

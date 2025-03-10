@@ -12,17 +12,34 @@ public class DiveHitbox : NetworkBehaviour
     private Collider hitboxCollider;
 
     private NetworkIdentity parentIdentity;
-    private PlayerController playerController;
+    public PlayerController playerController;
 
     void Start()
     {
+        playerController = FindFirstObjectByType<PlayerController>();
         parentIdentity = GetComponentInParent<NetworkIdentity>();
         if (parentIdentity == null)
         {
             Debug.LogError("No NetworkIdentity found on parent object.");
         }
         hitboxCollider = GetComponent<Collider>();
-        playerController = FindFirstObjectByType<PlayerController>();
+        if (playerController == null)
+        {
+            Debug.LogError("PlayerController not found in the parent hierarchy.");
+        }
+        else
+        {
+            Debug.Log("Find playerController");
+        }
+    }
+
+    public override void OnStartServer()
+    {
+        playerController = GetComponentInParent<PlayerController>();
+        if (playerController == null)
+        {
+            Debug.LogError("PlayerController not found on server.");
+        }
     }
 
     void Update()
@@ -47,6 +64,7 @@ public class DiveHitbox : NetworkBehaviour
                 if (ballIdentity != null && parentIdentity != null && parentIdentity.isOwned)
                 {
                     CmdApplyDiveForce(ballIdentity.netId, hitPower, spin);
+                    playerController.CmdNotifyBallTouched(false);
                 }
             }
         }
@@ -61,7 +79,6 @@ public class DiveHitbox : NetworkBehaviour
 
             if (ball != null)
             {
-                playerController.CmdNotifyBallTouched(false);
                 ball.ApplyBump(Vector3.up, hitPower, spin);
             }
             else

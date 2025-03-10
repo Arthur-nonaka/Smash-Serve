@@ -97,6 +97,8 @@ public class BumpHitbox : NetworkBehaviour
                 if (ballIdentity != null && parentIdentity != null && parentIdentity.isOwned)
                 {
                     CmdBumpBall(ballIdentity.netId, bumpDirection, hitPower, spin);
+                    playerMovement.CmdNotifyBallTouched(false);
+
                 }
             }
             hitChargeTime = 0f;
@@ -128,15 +130,8 @@ public class BumpHitbox : NetworkBehaviour
             VolleyballBall ball = identity.GetComponent<VolleyballBall>();
             if (ball != null)
             {
-                if (playerMovement != null)
-                {
-                    playerMovement.CmdNotifyBallTouched(false);
-                    ball.ApplyBump(bumpDirection, hitPower, spin);
-                }
-                else
-                {
-                    Debug.LogError("PlayerController not found on the player object.");
-                }
+                ball.ApplyBump(bumpDirection, hitPower, spin);
+
             }
             else
             {

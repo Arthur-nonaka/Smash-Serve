@@ -29,6 +29,11 @@ public class BallSpawner : NetworkBehaviour
                 Debug.Log("Only the designated server can spawn the ball.");
                 return;
             }
+            if (FindObjectOfType<VolleyballBall>() != null)
+            {
+                Debug.Log("A ball already exists in the scene. Cannot spawn another one.");
+                return;
+            }
         }
 
 

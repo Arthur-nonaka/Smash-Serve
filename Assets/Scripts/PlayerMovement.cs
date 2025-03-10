@@ -521,6 +521,7 @@ public class PlayerController : NetworkBehaviour
             }
 
             CmdPerformSet(power, directionMultiplier, setDirection);
+            CmdNotifyBallTouched(false);
         }
     }
 
@@ -532,7 +533,6 @@ public class PlayerController : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
-                CmdNotifyBallTouched(false);
                 NetworkIdentity identity = ball.GetComponent<NetworkIdentity>();
                 RpcPlaySetSound(identity.netId);
                 StartCoroutine(ServerHoldAndSetBall(ballRb, power, directionMultiplier, setDirection));
@@ -599,6 +599,7 @@ public class PlayerController : NetworkBehaviour
                 StartCoroutine(animationController.SetAnimatorBoolWithDelay("Spiked", true, 0.5f));
                 animator.SetBool("IsSpiking", false);
                 CmdPerformSpike(spikeDirection, hitPower);
+                CmdNotifyBallTouched(false);
                 Debug.Log("Spike attempted, command sent to server.");
             }
         }
@@ -616,7 +617,6 @@ public class PlayerController : NetworkBehaviour
             if (ballRb != null)
             {
                 vfxManager.GetComponent<VFXManager>().RpcPlaySpikeVFX(ball.transform.position);
-                CmdNotifyBallTouched(false);
                 NetworkIdentity identity = ball.GetComponent<NetworkIdentity>();
                 RpcPlaySpikeSound(identity.netId, hitPower);
                 Vector3 spin = playerCamera.right * 20f;
@@ -719,6 +719,7 @@ public class PlayerController : NetworkBehaviour
     [Command]
     public void CmdNotifyBallTouched(bool isBlock)
     {
+        Debug.Log($"CmdNotifyBallTouched called by player {netId}, isBlock: {isBlock}");
         if (TeamManager.Instance != null)
         {
             if (!TeamManager.Instance.matchActive)
@@ -734,6 +735,10 @@ public class PlayerController : NetworkBehaviour
             {
                 TeamManager.Instance.UpdateBallLastTouched(this);
             }
+        }
+        else
+        {
+            Debug.LogError("TeamManager.Instance is null!");
         }
     }
 

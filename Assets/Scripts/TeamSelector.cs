@@ -116,6 +116,11 @@ public class TeamManager : NetworkBehaviour
         score2 = 0;
 
         matchActive = true;
+        VolleyballBall[] balls = FindObjectsOfType<VolleyballBall>();
+        foreach (VolleyballBall ball in balls)
+        {
+            Destroy(ball.gameObject);
+        }
         UpdateScoreUI();
         TeleportPlayersToSpawnPoints();
 
@@ -212,6 +217,10 @@ public class TeamManager : NetworkBehaviour
                 Debug.LogWarning("Last touch player not found.");
             }
         }
+        else
+        {
+            EndRally(servingTeam == Team.Team1 ? Team.Team2 : Team.Team1);
+        }
 
     }
 
@@ -225,18 +234,20 @@ public class TeamManager : NetworkBehaviour
     [Server]
     void EndRally(Team winningTeam)
     {
-        servingTeam = winningTeam;
         ball.CmdResetBall();
-        NotificationManager.Instance.QueueNotification($"{winningTeam}`s point", Color.green);
+        RpcQueueNotification($"{winningTeam}`s point", Color.green);
         if (winningTeam == Team.Team1)
         {
             score1++;
             if (team1Players.Count > 0)
             {
-                designatedServerNetId = team1Players[0].netId;
-                PlayerController server = team1Players[0];
-                team1Players.RemoveAt(0);
-                team1Players.Add(server);
+                if (servingTeam != Team.Team1)
+                {
+                    designatedServerNetId = team1Players[0].netId;
+                    PlayerController server = team1Players[0];
+                    team1Players.RemoveAt(0);
+                    team1Players.Add(server);
+                }
             }
         }
         else if (winningTeam == Team.Team2)
@@ -244,25 +255,42 @@ public class TeamManager : NetworkBehaviour
             score2++;
             if (team2Players.Count > 0)
             {
-                designatedServerNetId = team2Players[0].netId;
-                PlayerController server = team2Players[0];
-                team2Players.RemoveAt(0);
-                team2Players.Add(server);
+                if (servingTeam != Team.Team2)
+                {
+                    designatedServerNetId = team2Players[0].netId;
+                    PlayerController server = team2Players[0];
+                    team2Players.RemoveAt(0);
+                    team2Players.Add(server);
+                }
             }
         }
         else
         {
             designatedServerNetId = 0;
         }
+        servingTeam = winningTeam;
         PlayerController designatedServer = players.Find(p => p.netId == designatedServerNetId);
         if (designatedServer != null)
         {
-            NotificationManager.Instance.QueueNotification($"Server: Player {designatedServer.netId}", Color.gray);
+            RpcQueueNotification($"Server: Player {designatedServer.GetPlayerName()}", Color.gray);
         }
         UpdateScoreUI();
         ResetTouches();
         ball = null;
         Debug.Log($"Rally ended. Winning team: {winningTeam}. New serving team: {servingTeam}");
+    }
+
+    [ClientRpc]
+    public void RpcQueueNotification(string message, Color color)
+    {
+        NotificationManager.Instance.QueueNotification(message, color);
+    }
+
+    [ClientRpc]
+    public void RpcEndMatch()
+    {
+        matchActive = false;
+        Debug.Log("Match ended.");
     }
 
     [ClientRpc]
