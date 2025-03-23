@@ -9,7 +9,7 @@ public class CameraFollowHead : MonoBehaviour
     {
         if (head != null)
         {
-            transform.position = head.position + offset;
+            transform.position = head.position + offset + head.forward * 0.2f;
         }
     }
 }

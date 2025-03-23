@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Mirror;
 using TMPro;
+using System.Collections;
 
 public class UIManager : MonoBehaviour
 {
@@ -21,6 +22,10 @@ public class UIManager : MonoBehaviour
     public GameObject optionsPanel;
 
     public Text lastPlayerNameText;
+
+    [Header("Connection Timeout Settings")]
+    public float connectionTimeout = 7f;
+    public GameObject loadingPanel;
 
     private OptionsManager optionsManager;
 
@@ -57,6 +62,31 @@ public class UIManager : MonoBehaviour
         {
             networkManager.networkAddress = ipInput.text;
             networkManager.StartClient();
+            loadingPanel.SetActive(true);
+
+            StartCoroutine(CheckClientConnection(connectionTimeout));
+        }
+    }
+
+    IEnumerator CheckClientConnection(float timeout)
+    {
+        float startTime = Time.time;
+
+        while (!NetworkClient.isConnected && Time.time - startTime < timeout)
+        {
+            yield return null;
+        }
+
+        if (!NetworkClient.isConnected)
+        {
+            Debug.Log("Client disconnected");
+            loadingPanel.SetActive(false);
+
+        }
+        else
+        {
+            Debug.Log("Client connected successfully to server!");
+            loadingPanel.SetActive(false);
             ShowGameplayPanel();
         }
     }

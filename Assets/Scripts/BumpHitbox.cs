@@ -46,7 +46,7 @@ public class BumpHitbox : NetworkBehaviour
     {
         if (!isOwned) return;
 
-        if (Input.GetMouseButtonDown(1) && playerMovement.GetIsGrounded())
+        if (Input.GetMouseButtonDown(1) && playerMovement.GetIsGrounded() && !playerMovement.isServing)
         {
             Debug.Log("Mouse right button down");
             isCharging = true;
@@ -62,7 +62,7 @@ public class BumpHitbox : NetworkBehaviour
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
             powerSlider.value = powerPercent;
         }
-        if (Input.GetMouseButtonUp(1) && playerMovement.GetIsGrounded())
+        if (Input.GetMouseButtonUp(1) && playerMovement.GetIsGrounded() && !playerMovement.isServing)
         {
             Debug.Log("Mouse right button up");
             isCharging = false;
@@ -96,8 +96,11 @@ public class BumpHitbox : NetworkBehaviour
                 NetworkIdentity ballIdentity = ball.GetComponent<NetworkIdentity>();
                 if (ballIdentity != null && parentIdentity != null && parentIdentity.isOwned)
                 {
-                    CmdBumpBall(ballIdentity.netId, bumpDirection, hitPower, spin);
-                    playerMovement.CmdNotifyBallTouched(false);
+                    if (playerMovement.CanTouch())
+                    {
+                        CmdBumpBall(ballIdentity.netId, bumpDirection, hitPower, spin);
+                        playerMovement.CmdNotifyBallTouched(false);
+                    }
 
                 }
             }
@@ -130,6 +133,7 @@ public class BumpHitbox : NetworkBehaviour
             VolleyballBall ball = identity.GetComponent<VolleyballBall>();
             if (ball != null)
             {
+                ball.GetComponentInChildren<TrajectoryDrawer>().TriggerTrajectoryDisplay();
                 ball.ApplyBump(bumpDirection, hitPower, spin);
 
             }

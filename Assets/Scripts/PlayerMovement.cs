@@ -11,6 +11,13 @@ public enum Team
     Team2
 }
 
+public enum ActionType
+{
+    SetFront,
+    SetBack,
+    Spike
+}
+
 public class PlayerController : NetworkBehaviour
 {
     public CharacterController controller;
@@ -30,7 +37,7 @@ public class PlayerController : NetworkBehaviour
     public float jumpForce = 1f;
     public float jumpChargeSpeed = 4.5f;
     public float maxHitPower = 20f;
-    public float setForce = 10f;
+    public float setForce = 8f;
     public Transform handPositionR;
     public Transform handPositionL;
     public float powerChargeSpeed = 3.0f;
@@ -48,6 +55,7 @@ public class PlayerController : NetworkBehaviour
     private float hitChargeTime = 0f;
     private GameObject ball;
     private bool canSet = false;
+    private bool canPerformSet = true;
     private bool canSpike = false;
     private bool stopJump = false;
 
@@ -99,6 +107,9 @@ public class PlayerController : NetworkBehaviour
     public PhysicsMaterial hardMaterial;
 
     public float blockHardness { get; private set; }
+
+    public bool isServing = false;
+    private string serverType = "Spin";
 
     void Start()
     {
@@ -193,52 +204,168 @@ public class PlayerController : NetworkBehaviour
         if (!isLocalPlayer) return;
 
         HandleMovement();
-        HandleJump();
         HandleCamera();
         // HandleBallInteraction();
-        HandleSpike();
-        HandleBlock();
-        HandleDive();
 
-        float currentY = transform.position.y;
-        animator.SetFloat("Height", currentY);
 
-        if (Input.GetKey(KeyCode.F) && !Input.GetKey(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.V) && !isServing && GetIsGrounded() && !isDiving)
         {
-            hitChargeTime += Time.deltaTime * powerChargeSpeed;
-            hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
-            animator.SetBool("IsSetting", true);
-
-            float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
-            powerSlider.value = powerPercent;
+            CmdSpawnBallServe();
+            isServing = true;
         }
 
-        if (Input.GetKeyUp(KeyCode.F))
+        if (!isServing)
         {
-            StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsSetting", true, 0.6f));
-            float power = hitChargeTime;
-            StartCoroutine(DelayedHitboxCheck(setHitbox, () => PerformSet(power, 1), delayTime));
-            hitChargeTime = 0f;
-            powerSlider.value = 0;
+
+            HandleJump();
+            HandleSpike();
+            HandleBlock();
+            HandleDive();
+
+            float currentY = transform.position.y;
+            animator.SetFloat("Height", currentY);
+
+            if (Input.GetKey(KeyCode.F) && !Input.GetKey(KeyCode.R))
+            {
+                hitChargeTime += Time.deltaTime * powerChargeSpeed;
+                hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
+                animator.SetBool("IsSetting", true);
+
+                float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
+                powerSlider.value = powerPercent;
+            }
+
+            if (Input.GetKeyUp(KeyCode.F))
+            {
+                StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsSetting", true, 0.6f));
+                float power = hitChargeTime;
+                NetworkIdentity parentIdentity = GetComponentInParent<NetworkIdentity>();
+                uint parentNetId = parentIdentity.netId;
+                StartCoroutine(DelayedHitboxCheck(spikeHitbox, () => PerformSet(power, 1), delayTime));
+                hitChargeTime = 0f;
+                powerSlider.value = 0;
+            }
+
+            if (Input.GetKey(KeyCode.R) && !Input.GetKey(KeyCode.F))
+            {
+                hitChargeTime += Time.deltaTime * powerChargeSpeed;
+                hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
+                animator.SetBool("IsSetting", true);
+
+                float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
+                powerSlider.value = powerPercent;
+            }
+
+            if (Input.GetKeyUp(KeyCode.R))
+            {
+                StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsSetting", true, 0.6f));
+                float power = hitChargeTime;
+                NetworkIdentity parentIdentity = GetComponentInParent<NetworkIdentity>();
+                uint parentNetId = parentIdentity.netId;
+                StartCoroutine(DelayedHitboxCheck(spikeHitbox, () => PerformSet(power, -1), delayTime));
+                hitChargeTime = 0f;
+                powerSlider.value = 0;
+            }
+        }
+        else
+        {
+            if (Input.GetMouseButton(1))
+            {
+                hitChargeTime += Time.deltaTime * powerChargeSpeed;
+                hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
+
+                float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
+                powerSlider.value = powerPercent;
+            }
+
+            if (Input.GetMouseButtonUp(1))
+            {
+                float power = hitChargeTime;
+                CmdServeBall(power);
+                hitChargeTime = 0f;
+                powerSlider.value = 0;
+                isServing = false;
+                serverType = "Spin";
+            }
+
+            if (Input.GetMouseButton(0))
+            {
+                hitChargeTime += Time.deltaTime * powerChargeSpeed;
+                hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
+
+                float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
+                powerSlider.value = powerPercent;
+            }
+
+            if (Input.GetMouseButtonUp(0))
+            {
+                float power = hitChargeTime;
+                CmdServeBall(power);
+                hitChargeTime = 0f;
+                powerSlider.value = 0;
+                isServing = false;
+                serverType = "Float";
+            }
+
         }
 
-        if (Input.GetKey(KeyCode.R) && !Input.GetKey(KeyCode.F))
-        {
-            hitChargeTime += Time.deltaTime * powerChargeSpeed;
-            hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
-            animator.SetBool("IsSetting", true);
+    }
 
-            float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
-            powerSlider.value = powerPercent;
+    [Command]
+    void CmdSpawnBallServe()
+    {
+        if (TeamManager.Instance.matchActive)
+        {
+            if (TeamManager.Instance.designatedServerNetId != netId && TeamManager.Instance.designatedServerNetId != 0)
+            {
+                Debug.Log("Only the designated server can spawn the ball.");
+                return;
+            }
+            if (FindObjectOfType<VolleyballBall>() != null)
+            {
+                Debug.Log("A ball already exists in the scene. Cannot spawn another one.");
+                return;
+            }
+
+            TeamManager.Instance.currentTouches = 2;
         }
 
-        if (Input.GetKeyUp(KeyCode.R))
+        Vector3 spawnPos = handPositionR.position;
+        GameObject ballInstance = Instantiate(ballPrefab, spawnPos, Quaternion.identity);
+
+        BallController ballCtrl = ballInstance.GetComponent<BallController>();
+        if (ballCtrl != null)
         {
-            StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsSetting", true, 0.6f));
-            float power = hitChargeTime;
-            StartCoroutine(DelayedHitboxCheck(setHitbox, () => PerformSet(power, -1), delayTime));
-            hitChargeTime = 0f;
-            powerSlider.value = 0;
+            ballCtrl.AttachToHand(handPositionR);
+        }
+        else
+        {
+            Debug.LogError("Ball prefab is missing the BallController component.");
+        }
+
+        NetworkServer.Spawn(ballInstance);
+
+        ball = ballInstance;
+        isServing = true;
+    }
+
+    [Command]
+    void CmdServeBall(float charge)
+    {
+        if (ball != null)
+        {
+            BallController ballCtrl = ball.GetComponent<BallController>();
+            if (ballCtrl != null)
+            {
+                Vector3 serveForce = transform.forward * (charge * 0.7f) + Vector3.up * (charge * 1.5f + 4f);
+                ballCtrl.Serve(serveForce);
+            }
+            else
+            {
+                Debug.LogError("Ball does not have a BallController component.");
+            }
+
+            ball = null;
         }
     }
 
@@ -266,6 +393,16 @@ public class PlayerController : NetworkBehaviour
             diveHitbox.SetActive(true);
             isDiving = true;
             StartCoroutine(EndDiveAfterDelay(diveDuration));
+            CmdDive();
+        }
+    }
+
+    [Command]
+    void CmdDive()
+    {
+        if (new System.Random().Next(0, 10) <= 6)
+        {
+            RpcPlayTennisSound(GetComponent<NetworkIdentity>().netId);
         }
     }
 
@@ -375,6 +512,8 @@ public class PlayerController : NetworkBehaviour
         if (Input.GetMouseButtonUp(0) && !GetIsGrounded())
         {
             float power = hitChargeTime;
+            NetworkIdentity parentIdentity = GetComponentInParent<NetworkIdentity>();
+            uint parentNetId = parentIdentity.netId;
             StartCoroutine(DelayedHitboxCheck(spikeHitbox, () => PerformSpike(power), delayTime));
             hitChargeTime = 0f;
             powerSlider.value = 0;
@@ -409,10 +548,12 @@ public class PlayerController : NetworkBehaviour
         float speed = walkSpeed;
         Vector3 finalMove;
 
+        bool wasWalking = horizontalVelocity.sqrMagnitude > 0;
+
         if (GetIsGrounded())
         {
             speed = (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.Space)) ? runSpeed : walkSpeed;
-            if (Input.GetMouseButton(1))
+            if (Input.GetMouseButton(1) && !isServing)
             {
                 speed *= 0.5f;
                 animator.SetBool("IsBumping", true);
@@ -420,15 +561,23 @@ public class PlayerController : NetworkBehaviour
             else
             {
                 animator.SetBool("IsBumping", false);
-                if (Input.GetKey(KeyCode.Space))
-                {
-                    speed *= 0.5f;
-                }
+            }
+            if (Input.GetKey(KeyCode.Space))
+            {
+                animator.SetBool("IsBumping", false);
+                speed *= 0.5f;
             }
         }
         lockedHorizontalVelocity = worldInput * speed;
         horizontalVelocity = lockedHorizontalVelocity;
         finalMove = horizontalVelocity;
+
+        bool isWalking = horizontalVelocity.sqrMagnitude > 0;
+
+        if (!wasWalking && isWalking)
+        {
+            CmdPlayWalkSound();
+        }
 
         if (!isDiving)
         {
@@ -437,6 +586,15 @@ public class PlayerController : NetworkBehaviour
         else
         {
             controller.Move(transform.forward * diveForce * Time.deltaTime);
+        }
+    }
+
+    [Command]
+    void CmdPlayWalkSound()
+    {
+        if (new System.Random().Next(0, 10) <= 3)
+        {
+            RpcPlayTennisSound(GetComponent<NetworkIdentity>().netId);
         }
     }
 
@@ -475,9 +633,10 @@ public class PlayerController : NetworkBehaviour
         {
             if (!stopJump)
             {
-                CmdPerformJump();
                 StartCoroutine(animationController.SetAnimatorBoolWithDelay("IsJumping", true, 0.5f));
                 float jumpPower = jumpForce * (chargeTime / maxChargeTime + 0.5f);
+                float charged = chargeTime;
+                CmdPerformJump(charged);
                 velocity.y = Mathf.Sqrt(jumpPower * -2f * gravity);
                 chargeTime = 0f;
                 chargeTimeReverse = 0f;
@@ -498,9 +657,13 @@ public class PlayerController : NetworkBehaviour
     }
 
     [Command]
-    public void CmdPerformJump()
+    public void CmdPerformJump(float chargeTime)
     {
         vfxManager.GetComponent<VFXManager>().RpcPlayJumpVFX(transform.position + Vector3.up * 1.2f);
+        if ((chargeTime / Mathf.Abs(maxChargeTime)) * 100f > 70)
+        {
+            RpcPlayTennisSound(GetComponent<NetworkIdentity>().netId);
+        }
     }
 
     public bool GetIsGrounded()
@@ -510,10 +673,12 @@ public class PlayerController : NetworkBehaviour
 
     void PerformSet(float power, int directionMultiplier)
     {
-        if (!canSet) return;
+        if (!canSet || !canPerformSet || !CanTouch()) return;
 
         if (ball != null)
         {
+            canPerformSet = false;
+            StartCoroutine(ResetSetCooldown(0.5f));
             Vector3 setDirection = playerCamera.forward;
             if (directionMultiplier < 0)
             {
@@ -523,6 +688,13 @@ public class PlayerController : NetworkBehaviour
             CmdPerformSet(power, directionMultiplier, setDirection);
             CmdNotifyBallTouched(false);
         }
+    }
+
+
+    IEnumerator ResetSetCooldown(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        canPerformSet = true;
     }
 
     [Command]
@@ -567,13 +739,15 @@ public class PlayerController : NetworkBehaviour
             RpcPlaySetAnimation("Back_Set");
         }
 
-        float setPower = Mathf.Lerp(setForce * 0.5f, setForce * 2f, power / maxChargeTime);
+        float setPower = Mathf.Lerp(setForce * 0.4f, setForce * 1.6f, power / maxChargeTime);
 
         ballRb.isKinematic = false;
+
 
         ballRb.AddForce(setDirection.normalized * setPower, ForceMode.Impulse);
 
         RpcSyncBallState(ball.transform.position, ballRb.linearVelocity, ballRb.angularVelocity);
+        ballRb.GetComponentInChildren<TrajectoryDrawer>().TriggerTrajectoryDisplay();
         yield return null;
     }
 
@@ -586,7 +760,7 @@ public class PlayerController : NetworkBehaviour
 
     void PerformSpike(float power)
     {
-        if (!canSpike) return;
+        if (!canSpike || !CanTouch()) return;
 
         if (ball != null)
         {
@@ -625,8 +799,17 @@ public class PlayerController : NetworkBehaviour
                 ballRb.linearVelocity = Vector3.zero;
                 ballRb.angularVelocity = Vector3.zero;
                 ballRb.AddForce(spikeDirection * hitPower, ForceMode.Impulse);
-                ballRb.AddTorque(spin, ForceMode.Impulse);
+                if (serverType == "Spin")
+                {
+                    ballRb.AddTorque(spin, ForceMode.Impulse);
+                }
+                else
+                {
+                    ball.GetComponent<VolleyballBall>().Float();
+                }
+                serverType = "Spin";
 
+                ballRb.GetComponentInChildren<TrajectoryDrawer>().TriggerTrajectoryDisable();
                 StartCoroutine(SyncBallStateNextFrame());
             }
         }
@@ -644,7 +827,7 @@ public class PlayerController : NetworkBehaviour
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
         verticalRotation -= mouseY;
-        verticalRotation = Mathf.Clamp(verticalRotation, -90f, 60f);
+        verticalRotation = Mathf.Clamp(verticalRotation, -90f, 70f);
 
         if (isAttacking)
         {
@@ -744,7 +927,7 @@ public class PlayerController : NetworkBehaviour
 
     IEnumerator DelayedHitboxCheck(GameObject hitbox, Action action, float delay)
     {
-        if (IsBallInHitbox(hitbox))
+        if (IsBallCenterInHitbox(hitbox))
         {
             action.Invoke();
             yield break;
@@ -763,20 +946,6 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    bool IsBallInHitbox(GameObject hitbox)
-    {
-        Collider[] hitColliders = Physics.OverlapBox(hitbox.transform.position, hitbox.transform.localScale / 2);
-        foreach (Collider collider in hitColliders)
-        {
-            if (collider.gameObject == ball)
-            {
-                Debug.Log("Collide With " + hitbox.name);
-                return true;
-            }
-        }
-        return false;
-    }
-
     bool IsBallCenterInHitbox(GameObject hitbox)
     {
         Collider hitboxCollider = hitbox.GetComponent<Collider>();
@@ -784,6 +953,25 @@ public class PlayerController : NetworkBehaviour
             return false;
 
         return hitboxCollider.bounds.Contains(ball.transform.position);
+    }
+
+    [ClientRpc]
+    void RpcPlayTennisSound(uint audioSourceNetId)
+    {
+        NetworkIdentity identity = NetworkClient.spawned[audioSourceNetId];
+        if (identity != null)
+        {
+            AudioSource audioSource = identity.GetComponent<AudioSource>();
+            if (audioSource != null && SoundManager.Instance.tennisSound.Length > 0)
+            {
+                int randomNumber = new System.Random().Next(0, SoundManager.Instance.tennisSound.Length);
+                SoundManager.Instance.PlaySound(SoundManager.Instance.tennisSound[randomNumber], audioSource);
+            }
+            else
+            {
+                Debug.LogError("AudioSource not found or tennisSound array is empty." + SoundManager.Instance.tennisSound.Length);
+            }
+        }
     }
 
     [ClientRpc]
@@ -852,4 +1040,15 @@ public class PlayerController : NetworkBehaviour
         ball = null;
     }
 
+
+    public bool CanTouch()
+    {
+        if (TeamManager.Instance == null)
+        {
+            Debug.LogWarning("TeamManager reference is missing.");
+            return false;
+        }
+
+        return TeamManager.Instance.lastTouchPlayerNetId != netId;
+    }
 }

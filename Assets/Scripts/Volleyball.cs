@@ -41,6 +41,7 @@ public class VolleyballBall : NetworkBehaviour
     [SyncVar]
     public bool bumpOccurred = false;
 
+    public bool isFloating = false;
 
 
     void Start()
@@ -143,8 +144,31 @@ public class VolleyballBall : NetworkBehaviour
     {
         Vector3 velocity = rb.linearVelocity;
         Vector3 angularVelocity = rb.angularVelocity;
-        Vector3 magnusForce = magnusCoefficient * airDensity * Mathf.PI * Mathf.Pow(radius, 3) * Vector3.Cross(angularVelocity, velocity);
-        rb.AddForce(magnusForce);
+
+        if (angularVelocity == Vector3.zero && isFloating)
+        {
+            Debug.Log("Floating");
+            float randomForce = UnityEngine.Random.Range(-0.4f, 0.4f);
+            float randomForceVertical = UnityEngine.Random.Range(-0.4f, 0.4f);
+            rb.AddForce(new Vector3(randomForce, randomForceVertical, randomForce), ForceMode.Impulse);
+        }
+        else
+        {
+            Vector3 magnusForce = magnusCoefficient * airDensity * Mathf.PI * Mathf.Pow(radius, 3) * Vector3.Cross(angularVelocity, velocity);
+            rb.AddForce(magnusForce);
+        }
+    }
+
+    public IEnumerator DisableFloatingAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        isFloating = false;
+    }
+
+    public void Float()
+    {
+        isFloating = true;
+        StartCoroutine(DisableFloatingAfterDelay(1.5f));
     }
 
     void OnCollisionEnter(Collision collision)

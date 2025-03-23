@@ -63,8 +63,11 @@ public class DiveHitbox : NetworkBehaviour
                 NetworkIdentity ballIdentity = ball.GetComponent<NetworkIdentity>();
                 if (ballIdentity != null && parentIdentity != null && parentIdentity.isOwned)
                 {
-                    CmdApplyDiveForce(ballIdentity.netId, hitPower, spin);
-                    playerController.CmdNotifyBallTouched(false);
+                    if (playerController.CanTouch())
+                    {
+                        CmdApplyDiveForce(ballIdentity.netId, hitPower, spin);
+                        playerController.CmdNotifyBallTouched(false);
+                    }
                 }
             }
         }

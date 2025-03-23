@@ -11,7 +11,8 @@ public class SoundManager : MonoBehaviour
     public AudioClip bumpSound;
     public AudioClip spikeSound;
     public AudioClip setSound;
-    public AudioClip groundSound;
+    public AudioClip groundSound;   
+    public AudioClip[] tennisSound;   
 
     void Awake()
     {

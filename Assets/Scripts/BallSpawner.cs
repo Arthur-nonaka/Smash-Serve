@@ -12,11 +12,6 @@ public class BallSpawner : NetworkBehaviour
         {
             CmdSpawnBall();
         }
-
-        // if (isLocalPlayer && Input.GetKeyDown(KeyCode.V))
-        // {
-        //     CmdSpawnBallVelocity();
-        // }
     }
 
     [Command]
@@ -34,6 +29,8 @@ public class BallSpawner : NetworkBehaviour
                 Debug.Log("A ball already exists in the scene. Cannot spawn another one.");
                 return;
             }
+
+            TeamManager.Instance.currentTouches = 2;
         }
 
 
@@ -41,7 +38,6 @@ public class BallSpawner : NetworkBehaviour
         GameObject ball = Instantiate(ballPrefab, spawnPosition, Quaternion.identity);
         NetworkServer.Spawn(ball);
     }
-
 
     [Command]
     void CmdSpawnBallVelocity()

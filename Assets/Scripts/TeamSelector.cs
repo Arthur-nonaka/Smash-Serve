@@ -124,6 +124,12 @@ public class TeamManager : NetworkBehaviour
         UpdateScoreUI();
         TeleportPlayersToSpawnPoints();
 
+        PlayerController designatedServer = players.Find(p => p.netId == designatedServerNetId);
+        if (designatedServer != null)
+        {
+            RpcQueueNotification($"Server: Player {designatedServer.GetPlayerName()}", Color.gray);
+        }
+
         Debug.Log("Match started!");
     }
 
@@ -168,6 +174,11 @@ public class TeamManager : NetworkBehaviour
             Debug.LogWarning($"Fault! Player {player.netId} touched twice.");
             EndRally(player.team == Team.Team1 ? Team.Team2 : Team.Team1);
             return;
+        }
+
+        if (player.team != players.Find(p => p.netId == lastTouchPlayerNetId)?.team)
+        {
+            currentTouches = 0;
         }
 
         currentTouches++;
@@ -222,6 +233,23 @@ public class TeamManager : NetworkBehaviour
             EndRally(servingTeam == Team.Team1 ? Team.Team2 : Team.Team1);
         }
 
+    }
+
+    [Server]
+    public void BallPassedOffAntenna(VolleyballBall ball)
+    {
+        if (currentTouches >= 2)
+        {
+            PlayerController lastTouchPlayer = players.Find(p => p.netId == lastTouchPlayerNetId);
+            if (lastTouchPlayer != null)
+            {
+                EndRally(lastTouchPlayer.team == Team.Team1 ? Team.Team2 : Team.Team1);
+            }
+            else
+            {
+                EndRally(servingTeam == Team.Team1 ? Team.Team2 : Team.Team1);
+            }
+        }
     }
 
     [Server]
