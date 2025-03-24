@@ -80,6 +80,12 @@ public class BumpHitbox : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
+                if (!playerMovement.IsSameSide() || !playerMovement.GetIsGrounded())
+                {
+                    return;
+                }
+
+
                 Vector3 cameraForward = playerCamera.forward;
                 Vector3 horizontalDirection = new Vector3(cameraForward.x, 0, cameraForward.z).normalized;
                 float cameraPitchDegrees = playerCamera.eulerAngles.x;
@@ -92,6 +98,23 @@ public class BumpHitbox : NetworkBehaviour
                 float hitPower = mancheteForce * (hitChargeTime + 2f);
                 float randomDirection = Random.Range(-0.03f, 0.03f);
                 Vector3 spin = playerCamera.right * 0.08f + playerCamera.forward * randomDirection;
+
+                Vector3 hitboxCenter = hitboxCollider.bounds.center;
+                Vector3 relativeHit = ball.transform.position - hitboxCenter;
+                Vector3 localHit = transform.InverseTransformDirection(relativeHit);
+                if (localHit.x < -0.25f)
+                {
+                    Debug.Log("Left side");
+                    float lateralForce = Random.Range(-0.1f, -1f);
+                    float verticalForceRandom = Random.Range(-1f, 1f);
+                    bumpDirection += transform.right * lateralForce + transform.forward * verticalForceRandom;
+                }
+                else if (localHit.x > 0.25f)
+                {
+                    float lateralForce = Random.Range(0.3f, 1f);
+                    float verticalForceRandom = Random.Range(-1f, 1f);
+                    bumpDirection += transform.right * lateralForce + transform.forward * verticalForceRandom;
+                }
 
                 NetworkIdentity ballIdentity = ball.GetComponent<NetworkIdentity>();
                 if (ballIdentity != null && parentIdentity != null && parentIdentity.isOwned)
@@ -133,8 +156,10 @@ public class BumpHitbox : NetworkBehaviour
             VolleyballBall ball = identity.GetComponent<VolleyballBall>();
             if (ball != null)
             {
-                ball.GetComponentInChildren<TrajectoryDrawer>().TriggerTrajectoryDisplay();
                 ball.ApplyBump(bumpDirection, hitPower, spin);
+
+                StartCoroutine(DisplayTrajectoryAfterPhysicsUpdate(ball));
+                // ball.GetComponentInChildren<TrajectoryDrawer>().TriggerTrajectoryDisplay();
 
             }
             else
@@ -145,6 +170,17 @@ public class BumpHitbox : NetworkBehaviour
         else
         {
             Debug.LogError($"Invalid ballNetId: {ballNetId}. The object may not be spawned or registered in the network.");
+        }
+    }
+
+    IEnumerator DisplayTrajectoryAfterPhysicsUpdate(VolleyballBall ball)
+    {
+        yield return new WaitForFixedUpdate();
+
+        TrajectoryDrawer trajectoryDrawer = ball.GetComponentInChildren<TrajectoryDrawer>();
+        if (trajectoryDrawer != null)
+        {
+            trajectoryDrawer.TriggerTrajectoryDisplay();
         }
     }
 }

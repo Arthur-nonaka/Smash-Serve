@@ -175,10 +175,119 @@ public class VolleyballBall : NetworkBehaviour
     {
         if (!isServer) return;
 
+        if (collision.gameObject.CompareTag("Block"))
+        {
+            PlayerController playerController = collision.gameObject.GetComponentInParent<PlayerController>();
+            if (playerController != null)
+            {
+                ContactPoint contact = collision.contacts[0];
+                Vector3 impactPoint = contact.point;
+
+                Vector3 blockCenter = collision.collider.bounds.center;
+                Vector3 impactOffset = impactPoint - blockCenter;
+                Vector3 extents = collision.collider.bounds.extents;
+                float normalizedDistanceX = Mathf.Abs(impactOffset.x) / extents.x;
+                float normalizedDistanceZ = Mathf.Abs(impactOffset.z) / extents.z;
+                float edgeFactor = Mathf.Max(normalizedDistanceX, normalizedDistanceZ);
+                edgeFactor = Mathf.Clamp01(edgeFactor * 1.2f);
+
+                Vector3 originalDirection = -rb.linearVelocity.normalized;
+                float incomingSpeed = rb.linearVelocity.magnitude;
+                float spikePowerFactor = Mathf.Clamp(incomingSpeed / 20f, 0.5f, 1.5f);
+
+                float hardnessFactor = Mathf.Lerp(0.2f, 1.0f, playerController.blockHardness);
+
+                float baseBreakChance = 0.0f;
+
+                if (playerController.blockHardness < 0.5f)
+                {
+                    baseBreakChance = 0.8f;
+                }
+                else if (playerController.blockHardness < 0.7f)
+                {
+                    baseBreakChance = 0.4f;
+                }
+                else
+                {
+                    baseBreakChance = 0.2f;
+                }
+
+                float powerBonus = (spikePowerFactor - 1.0f) * 0.3f;
+
+                float edgeBonus = edgeFactor * 0.15f;
+
+                float breakProbability = baseBreakChance + powerBonus + edgeBonus;
+                breakProbability = Mathf.Clamp01(breakProbability);
+
+                bool blockBreaks = UnityEngine.Random.value < breakProbability;
+
+                Debug.Log("Break chance: " + breakProbability.ToString("F2") +
+                          " (base: " + baseBreakChance.ToString("F2") +
+                          ", power: " + powerBonus.ToString("F2") +
+                          ", edge: " + edgeBonus.ToString("F2") +
+                          ") - Will break: " + blockBreaks);
+
+                rb.linearVelocity *= hardnessFactor;
+
+                if (blockBreaks || playerController.blockHardness < 0.4f)
+                {
+                    Debug.Log("Pass through");
+
+                    Vector3 passDirection = originalDirection;
+                    passDirection = Quaternion.Euler(
+                        UnityEngine.Random.Range(-15f, 15f) * (1 - hardnessFactor),
+                        UnityEngine.Random.Range(-15f, 15f) * (1 - hardnessFactor),
+                        0
+                    ) * passDirection;
+
+                    passDirection += Vector3.up * 0.2f * (1 - hardnessFactor);
+                    passDirection = passDirection.normalized;
+
+                    float exitSpeedFactor = Mathf.Lerp(0.5f, 0.9f, 1 - hardnessFactor) * spikePowerFactor;
+                    rb.linearVelocity = passDirection * incomingSpeed * exitSpeedFactor;
+
+                    float randomAngle = UnityEngine.Random.Range(-30f, 30f) * (1 - hardnessFactor);
+                    Vector3 randomDir = Quaternion.Euler(0, randomAngle, 0) * originalDirection;
+
+                    float upwardForce = Mathf.Lerp(0.2f, 0.6f, spikePowerFactor) * (1 - hardnessFactor);
+                    passDirection += Vector3.up * upwardForce;
+                    passDirection = passDirection.normalized;
+
+                    Physics.IgnoreCollision(collision.collider, GetComponent<Collider>(), true);
+                    StartCoroutine(ReenableCollision(collision.collider, GetComponent<Collider>()));
+
+                    rb.linearVelocity = passDirection * incomingSpeed * exitSpeedFactor;
+                }
+                else
+                {
+                    Vector3 bounceDir = rb.linearVelocity.normalized;
+                    float bounceRandomness = (1 - hardnessFactor) * 0.3f;
+                    bounceDir = Quaternion.Euler(
+                        UnityEngine.Random.Range(-15f, 15f) * bounceRandomness,
+                        UnityEngine.Random.Range(-15f, 15f) * bounceRandomness,
+                        0
+                    ) * bounceDir;
+
+                    rb.linearVelocity = bounceDir * rb.linearVelocity.magnitude;
+                }
+
+                RpcPlayBumpSound();
+            }
+        }
+
         if (collision.gameObject.CompareTag("Ground") && !markCreated)
         {
             RpcPlayGroundSound();
             StartCoroutine(DelayedGroundCollisionResponse(collision));
+        }
+    }
+
+    private IEnumerator ReenableCollision(Collider blockCollider, Collider ballCollider)
+    {
+        yield return new WaitForSeconds(0.2f);
+        if (blockCollider != null && ballCollider != null)
+        {
+            Physics.IgnoreCollision(blockCollider, ballCollider, false);
         }
     }
 
@@ -358,25 +467,58 @@ public class VolleyballBall : NetworkBehaviour
     }
 
     [Server]
-    public void CmdResetBall()
+    public void ServerResetBall()
     {
-        if (gameObject.scene.IsValid())
-        {
-            GetComponent<Collider>().enabled = false;
-            StartCoroutine(DestroyBallAfterTime(2.1f));
-        }
+        Debug.Log($"Server resetting ball {gameObject.name} directly");
+
+        RpcPrepareForDestruction();
+
+        Invoke("DestroyBallOnServer", 2.0f);
     }
 
-    IEnumerator DestroyBallAfterTime(float delay)
+    [Server]
+    private void DestroyBallOnServer()
     {
-        yield return new WaitForSeconds(delay);
-        Debug.Log("Destroying ball on server");
-        RpcDestroyShadow();
-        if (shadow != null)
-        {
-            Destroy(shadow);
-        }
+        Debug.Log($"Server destroying ball {gameObject.name}");
         NetworkServer.Destroy(gameObject);
+    }
+
+    [ClientRpc]
+    private void RpcPrepareForDestruction()
+    {
+        Debug.Log($"Client {(isServer ? "(server)" : "(client)")} preparing for ball destruction");
+
+        Collider collider = GetComponent<Collider>();
+        if (collider != null)
+            collider.enabled = false;
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+
+        Renderer renderer = GetComponent<Renderer>();
+        if (renderer != null)
+            renderer.enabled = false;
+
+
+        TrajectoryDrawer trajectoryDrawer = GetComponent<TrajectoryDrawer>();
+        if (trajectoryDrawer != null)
+            trajectoryDrawer.TriggerTrajectoryDisable();
+
+
+        if (shadow != null)
+            Destroy(shadow);
+    }
+
+
+    [Command]
+    public void CmdResetBall()
+    {
+        Debug.LogWarning("CmdResetBall is deprecated. Use ServerResetBall instead.");
+        ServerResetBall();
     }
 
 

@@ -161,4 +161,9 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    public bool IsOptionsMenuActive()
+    {
+        return optionsPanel.activeSelf;
+    }
+
 }

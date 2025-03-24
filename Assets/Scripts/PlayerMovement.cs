@@ -109,6 +109,10 @@ public class PlayerController : NetworkBehaviour
     public float blockHardness { get; private set; }
 
     public bool isServing = false;
+
+    private bool isPaused = false;
+
+    [SyncVar]
     private string serverType = "Spin";
 
     void Start()
@@ -203,6 +207,16 @@ public class PlayerController : NetworkBehaviour
     {
         if (!isLocalPlayer) return;
 
+        if (ChatManager.Instance != null && ChatManager.Instance.IsChatActive())
+        {
+            return;
+        }
+
+        if (UIManager != null && UIManager.IsOptionsMenuActive())
+        {
+            return;
+        }
+
         HandleMovement();
         HandleCamera();
         // HandleBallInteraction();
@@ -285,7 +299,7 @@ public class PlayerController : NetworkBehaviour
                 hitChargeTime = 0f;
                 powerSlider.value = 0;
                 isServing = false;
-                serverType = "Spin";
+                CmdSetServerType("Spin");
             }
 
             if (Input.GetMouseButton(0))
@@ -304,11 +318,17 @@ public class PlayerController : NetworkBehaviour
                 hitChargeTime = 0f;
                 powerSlider.value = 0;
                 isServing = false;
-                serverType = "Float";
+                CmdSetServerType("Float");
             }
 
         }
 
+    }
+
+    [Command]
+    void CmdSetServerType(string type)
+    {
+        serverType = type;
     }
 
     [Command]
@@ -459,7 +479,7 @@ public class PlayerController : NetworkBehaviour
         blockHitboxPivot.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
 
 
-        blockHardness = Mathf.Lerp(0.5f, 1.5f, t);
+        blockHardness = Mathf.Lerp(0f, 1f, t);
 
         if (!blockHitbox.activeSelf)
             blockHitbox.SetActive(true);
@@ -473,7 +493,7 @@ public class PlayerController : NetworkBehaviour
     }
 
     [Command]
-    void CmdDeactivateBlock()
+    public void CmdDeactivateBlock()
     {
         RpcDeactivateBlock();
     }
@@ -705,21 +725,33 @@ public class PlayerController : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
+                if (!IsSameSide())
+                {
+                    return;
+                }
+
                 NetworkIdentity identity = ball.GetComponent<NetworkIdentity>();
-                RpcPlaySetSound(identity.netId);
-                StartCoroutine(ServerHoldAndSetBall(ballRb, power, directionMultiplier, setDirection));
+                if (ballRb.linearVelocity.magnitude > 15f)
+                {
+                    RpcPlayBumpSound(identity.netId);
+                }
+                else
+                {
+                    RpcPlaySetSound(identity.netId);
+                }
+                StartCoroutine(ServerHoldAndSetBall(ballRb, power, directionMultiplier, setDirection, ballRb.linearVelocity));
             }
         }
     }
 
-    IEnumerator ServerHoldAndSetBall(Rigidbody ballRb, float power, int directionMultiplier, Vector3 setDirection)
+    IEnumerator ServerHoldAndSetBall(Rigidbody ballRb, float power, int directionMultiplier, Vector3 setDirection, Vector3 incomingVelocity)
     {
         Vector3 handMidPoint = (handPositionL.position + handPositionR.position) / 2;
         Vector3 targetPosition = handMidPoint + Vector3.back * 0.15f;
 
         ballRb.isKinematic = true;
 
-        float duration = 0.16f;
+        float duration = 0.2f;
         float elapsedTime = 0f;
         while (elapsedTime < duration)
         {
@@ -738,16 +770,25 @@ public class PlayerController : NetworkBehaviour
         {
             RpcPlaySetAnimation("Back_Set");
         }
-
         float setPower = Mathf.Lerp(setForce * 0.4f, setForce * 1.6f, power / maxChargeTime);
 
         ballRb.isKinematic = false;
 
+        float slowFactor = 0.2f;
+        Vector3 slowedIncoming = incomingVelocity * slowFactor;
 
-        ballRb.AddForce(setDirection.normalized * setPower, ForceMode.Impulse);
+        Vector3 setVector = setDirection.normalized * setPower;
+
+        Vector3 finalVector = slowedIncoming + setVector + Vector3.up * 2f;
+
+        ballRb.AddForce(finalVector, ForceMode.Impulse);
 
         RpcSyncBallState(ball.transform.position, ballRb.linearVelocity, ballRb.angularVelocity);
+
+        yield return new WaitForFixedUpdate();
+
         ballRb.GetComponentInChildren<TrajectoryDrawer>().TriggerTrajectoryDisplay();
+
         yield return null;
     }
 
@@ -767,6 +808,11 @@ public class PlayerController : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
+                if (!IsSameSide())
+                {
+                    return;
+                }
+
                 Vector3 spikeDirection = (playerCamera.forward + Vector3.down * 0.2f).normalized;
                 float hitPower = spikeForce * (power / maxChargeTime + 0.1f);
 
@@ -807,7 +853,7 @@ public class PlayerController : NetworkBehaviour
                 {
                     ball.GetComponent<VolleyballBall>().Float();
                 }
-                serverType = "Spin";
+                CmdSetServerType("Spin");
 
                 ballRb.GetComponentInChildren<TrajectoryDrawer>().TriggerTrajectoryDisable();
                 StartCoroutine(SyncBallStateNextFrame());
@@ -989,6 +1035,14 @@ public class PlayerController : NetworkBehaviour
     }
 
     [ClientRpc]
+    void RpcPlayBumpSound(uint audioSourceNetId)
+    {
+        NetworkIdentity identity = NetworkClient.spawned[audioSourceNetId];
+        AudioSource audioSource = GetComponent<AudioSource>();
+        SoundManager.Instance.PlaySound(SoundManager.Instance.bumpSound, audioSource);
+    }
+
+    [ClientRpc]
     void RpcPlaySpikeSound(uint audioSourceNetId, float hitPower)
     {
         float volume = Mathf.Clamp(hitPower / 20f, 0.1f, 1f);
@@ -1038,6 +1092,15 @@ public class PlayerController : NetworkBehaviour
     {
         canSpike = false;
         ball = null;
+    }
+
+    public bool IsSameSide()
+    {
+        float playerX = transform.position.x;
+        float ballX = ball.transform.position.x;
+        return
+            (playerX <= 0 && ballX <= 0) ||
+            (playerX >= 0 && ballX >= 0);
     }
 
 

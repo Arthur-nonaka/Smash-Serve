@@ -198,10 +198,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 812e3f8d70e452b439d792eeff0b0409, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
   ballRigidbody: {fileID: -7452713288514639841}
-  resolution: 15
-  timeStep: 0.1
-  displayDuration: 2.5
+  resolution: 30
+  timeStep: 0.2
+  displayDuration: 2
   trajectoryOffset: {x: 0, y: 0, z: 0.2}
 --- !u!1001 &4433523602677314050
 PrefabInstance:

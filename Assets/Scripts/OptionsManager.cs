@@ -9,6 +9,7 @@ public class OptionsManager : NetworkBehaviour
     public Button teamsButton;
     public Button optionsButton;
     public Button matchButton;
+    public Button resetButton;
     public Button backButton;
     public Button anotherBackButton;
     public Button anotherBackButton2;
@@ -32,10 +33,12 @@ public class OptionsManager : NetworkBehaviour
         if (isServer)
         {
             matchButton.onClick.AddListener(ShowMatchPanel);
+            resetButton.onClick.AddListener(ResetBalls);
         }
         else
         {
             matchButton.gameObject.SetActive(false);
+            resetButton.gameObject.SetActive(false);
         }
 
         firstPanel.SetActive(true);
@@ -75,5 +78,40 @@ public class OptionsManager : NetworkBehaviour
         optionsPanel.SetActive(false);
         matchPanel.SetActive(false);
 
+    }
+
+    public void ResetBalls()
+    {
+        if (isServer)
+        {
+            ResetAllBalls();
+        }
+        else
+        {
+            CmdRequestResetBalls();
+        }
+    }
+
+    [Server]
+    private void ResetAllBalls()
+    {
+        Debug.Log("Server resetting all balls");
+
+        VolleyballBall[] balls = FindObjectsOfType<VolleyballBall>();
+        foreach (VolleyballBall ball in balls)
+        {
+            if (ball != null)
+            {
+                Debug.Log($"Resetting ball: {ball.name}");
+                ball.ServerResetBall();
+            }
+        }
+    }
+
+    [Command]
+    private void CmdRequestResetBalls()
+    {
+        Debug.Log("Server received reset request from client");
+        ResetAllBalls();
     }
 }

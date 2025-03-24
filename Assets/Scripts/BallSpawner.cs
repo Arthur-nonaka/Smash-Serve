@@ -12,6 +12,11 @@ public class BallSpawner : NetworkBehaviour
         {
             CmdSpawnBall();
         }
+
+        if (isLocalPlayer && Input.GetKeyDown(KeyCode.E))
+        {
+            CmdSpawnBallVelocity();
+        }
     }
 
     [Command]
@@ -42,14 +47,14 @@ public class BallSpawner : NetworkBehaviour
     [Command]
     void CmdSpawnBallVelocity()
     {
-        Vector3 spawnPosition = transform.position + Vector3.up * 5f + transform.forward * 7f;
+        Vector3 spawnPosition = transform.position + Vector3.up * 5f + transform.forward * 11f;
 
         GameObject ball = Instantiate(ballPrefab, spawnPosition, Quaternion.identity);
         Rigidbody ballRb = ball.GetComponent<Rigidbody>();
 
         if (ballRb != null)
         {
-            ballRb.linearVelocity = transform.forward * -30f;
+            ballRb.linearVelocity = transform.forward * -23f;
         }
         else
         {

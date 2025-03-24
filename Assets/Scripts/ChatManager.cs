@@ -43,6 +43,11 @@ public class ChatManager : NetworkBehaviour
 
     }
 
+    public bool IsChatActive()
+    {
+        return chatActive && chatInput.isFocused;
+    }
+
     private void SetChatActive(bool active)
     {
         chatActive = active;

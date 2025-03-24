@@ -56,6 +56,11 @@ public class DiveHitbox : NetworkBehaviour
             Rigidbody ballRb = other.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
+                if (!playerController.IsSameSide())
+                {
+                    return;
+                }
+
                 float hitPower = diveHitForce;
                 float randomDirection = Random.Range(-0.03f, 0.03f);
                 Vector3 spin = playerCamera.transform.right * 0.08f + playerCamera.transform.forward * randomDirection;
