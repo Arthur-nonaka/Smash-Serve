@@ -4,13 +4,6 @@ using Mirror;
 using UnityEngine.UI;
 using UnityEngine;
 
-// public enum Team
-// {
-//     None,
-//     Team1,
-//     Team2
-// }
-
 public class TeamManager : NetworkBehaviour
 {
     public static TeamManager Instance;
@@ -18,6 +11,8 @@ public class TeamManager : NetworkBehaviour
     [Header("Spawn Points")]
     public List<Transform> team1SpawnPoints = new List<Transform>();
     public List<Transform> team2SpawnPoints = new List<Transform>();
+    public Transform ServeTeam1;
+    public Transform ServeTeam2;
 
 
     [Header("Score")]
@@ -54,6 +49,10 @@ public class TeamManager : NetworkBehaviour
 
     public List<PlayerController> team1Players = new List<PlayerController>();
     public List<PlayerController> team2Players = new List<PlayerController>();
+
+    [Header("Team Colors")]
+    public Material team1Color;
+    public Material team2Color;
 
 
     void Awake()
@@ -175,6 +174,14 @@ public class TeamManager : NetworkBehaviour
             EndRally(player.team == Team.Team1 ? Team.Team2 : Team.Team1);
             return;
         }
+
+        PlayerController previousPlayer = players.Find(p => p.netId == lastTouchPlayerNetId);
+        if (previousPlayer != null)
+        {
+            previousPlayer.RpcHideLastTouchedMessage();
+        }
+
+        player.RpcShowLastTouchedMessage();
 
         if (player.team != players.Find(p => p.netId == lastTouchPlayerNetId)?.team)
         {
@@ -300,12 +307,28 @@ public class TeamManager : NetworkBehaviour
         PlayerController designatedServer = players.Find(p => p.netId == designatedServerNetId);
         if (designatedServer != null)
         {
-            RpcQueueNotification($"Server: Player {designatedServer.GetPlayerName()}", Color.gray);
+            RpcQueueNotification($"Server: {designatedServer.GetPlayerName()}", Color.gray);
+            if(designatedServer.team == Team.Team1)
+            {
+                designatedServer.RpcTeleport(ServeTeam1.position);
+            }
+            else if (designatedServer.team == Team.Team2)
+            {
+                designatedServer.RpcTeleport(ServeTeam2.position);
+            }
         }
         UpdateScoreUI();
         ResetTouches();
         ball = null;
         Debug.Log($"Rally ended. Winning team: {winningTeam}. New serving team: {servingTeam}");
+
+        if (score1 >= 25 || score2 >= 25)
+        {
+            if (score1 - score2 >= 2 || score1 - score2 <= -2)
+            {
+                EndMatch(winningTeam);
+            }
+        }
     }
 
     [ClientRpc]
@@ -314,11 +337,26 @@ public class TeamManager : NetworkBehaviour
         NotificationManager.Instance.QueueNotification(message, color);
     }
 
-    [ClientRpc]
-    public void RpcEndMatch()
+    [Server]
+    void EndMatch(Team winningTeam)
     {
         matchActive = false;
-        Debug.Log("Match ended.");
+        ResetTouches();
+        ball = null;
+
+        RpcQueueNotification($"Match Over! {winningTeam} Wins!", Color.yellow);
+
+        score1 = 0;
+        score2 = 0;
+        UpdateScoreUI();
+
+        foreach (PlayerController player in players)
+        {
+            Vector3 lobbyPosition = Vector3.zero;
+            player.RpcTeleport(lobbyPosition);
+        }
+
+        Debug.Log($"Match ended. Winning team: {winningTeam}");
     }
 
     [ClientRpc]
@@ -343,6 +381,18 @@ public class TeamManager : NetworkBehaviour
     [Server]
     public void SetPlayerTeam(PlayerController player, Team team)
     {
+        if (team1Players.Contains(player))
+        {
+            team1Players.Remove(player);
+            Debug.Log("Removing player from Team 1");
+
+        }
+        if (team2Players.Contains(player))
+        {
+            Debug.Log("Removing player from Team 2");
+            team2Players.Remove(player);
+        }
+
         player.team = team;
         Vector3 spawnPosition = Vector3.zero;
         if (team == Team.Team1)
@@ -365,6 +415,11 @@ public class TeamManager : NetworkBehaviour
             spawnPosition = team2SpawnPoints[Random.Range(0, team2SpawnPoints.Count)].position;
             team2Players.Add(player);
         }
+        Renderer[] renderers = player.GetComponentsInChildren<Renderer>();
+        renderers[1].material = team == Team.Team1 ? team1Color : team2Color;
+        player.RpcSetTeamColor(team == Team.Team1 ? 1 : 2);
+
+
         player.RpcTeleport(spawnPosition);
         Debug.Log($"Player {player.netId} assigned to team {team}");
     }

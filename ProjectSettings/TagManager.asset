@@ -15,6 +15,7 @@ TagManager:
   - VFXManager
   - OptionsManager
   - Block
+  - LastTouch
   layers:
   - Default
   - TransparentFX
@@ -27,7 +28,7 @@ TagManager:
   - Net
   - Hitbox
   - Block
-  - 
+  - NetBlock
   - 
   - 
   - 

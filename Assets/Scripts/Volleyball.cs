@@ -70,6 +70,10 @@ public class VolleyballBall : NetworkBehaviour
             shadowRenderer.color = col;
             shadow.transform.localRotation = Quaternion.Euler(90, 0, 0);
         }
+
+        int ballLayer = LayerMask.NameToLayer("Ball");
+        int netBlock = LayerMask.NameToLayer("NetBlock");
+        Physics.IgnoreLayerCollision(netBlock, ballLayer);
     }
 
     public override void OnStartServer()
@@ -199,27 +203,29 @@ public class VolleyballBall : NetworkBehaviour
 
                 float baseBreakChance = 0.0f;
 
-                if (playerController.blockHardness < 0.5f)
+                if (playerController.blockHardness < 0.4f)
                 {
-                    baseBreakChance = 0.8f;
+                    baseBreakChance = 0.5f;
                 }
                 else if (playerController.blockHardness < 0.7f)
                 {
-                    baseBreakChance = 0.4f;
+                    baseBreakChance = 0.3f;
                 }
                 else
                 {
-                    baseBreakChance = 0.2f;
+                    baseBreakChance = 0.05f;
                 }
 
                 float powerBonus = (spikePowerFactor - 1.0f) * 0.3f;
 
-                float edgeBonus = edgeFactor * 0.15f;
+                float edgeBonus = edgeFactor * 0.2f;
 
                 float breakProbability = baseBreakChance + powerBonus + edgeBonus;
                 breakProbability = Mathf.Clamp01(breakProbability);
 
                 bool blockBreaks = UnityEngine.Random.value < breakProbability;
+
+                Debug.Log("playerController.blockHardness: " + playerController.blockHardness.ToString("F2"));
 
                 Debug.Log("Break chance: " + breakProbability.ToString("F2") +
                           " (base: " + baseBreakChance.ToString("F2") +
@@ -229,7 +235,7 @@ public class VolleyballBall : NetworkBehaviour
 
                 rb.linearVelocity *= hardnessFactor;
 
-                if (blockBreaks || playerController.blockHardness < 0.4f)
+                if (blockBreaks)
                 {
                     Debug.Log("Pass through");
 

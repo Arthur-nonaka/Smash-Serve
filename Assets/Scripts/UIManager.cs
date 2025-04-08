@@ -49,23 +49,32 @@ public class UIManager : MonoBehaviour
 
     void StartHost()
     {
-        if (SetPlayerName())
+        SetPlayerName(playerNameInput.text);
+        if (SteamLobby.Instance != null)
         {
+            Debug.Log("SteamLobby instance found. Hosting lobby...");
+            SteamLobby.Instance.HostLobby();
+            SetPlayerSteamName();
+            ShowGameplayPanel();
+        }
+        else
+        {
+            Debug.LogError("SteamLobby instance is null! Ensure SteamLobby is initialized.");
             networkManager.StartHost();
             ShowGameplayPanel();
         }
+
     }
 
     void StartClient()
     {
-        if (SetPlayerName())
-        {
-            networkManager.networkAddress = ipInput.text;
-            networkManager.StartClient();
-            loadingPanel.SetActive(true);
+        SetPlayerName(playerNameInput.text);
+        networkManager.networkAddress = ipInput.text;
+        networkManager.StartClient();
+        loadingPanel.SetActive(true);
 
-            StartCoroutine(CheckClientConnection(connectionTimeout));
-        }
+        StartCoroutine(CheckClientConnection(connectionTimeout));
+
     }
 
     IEnumerator CheckClientConnection(float timeout)
@@ -91,9 +100,16 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    bool SetPlayerName()
+    bool SetPlayerSteamName()
     {
         string playerName = playerNameInput.text;
+
+        if (string.IsNullOrEmpty(playerName) && SteamLobby.Instance != null)
+        {
+            playerName = SteamLobby.Instance.GetSteamUserName();
+            playerNameInput.text = playerName;
+        }
+
         if (!string.IsNullOrEmpty(playerName))
         {
             PlayerPrefs.SetString("PlayerName", playerName);
@@ -108,12 +124,26 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    public void SetPlayerName(string name)
+    {
+        if (playerNameInput != null)
+        {
+            playerNameInput.text = name;
+        }
+
+        PlayerPrefs.SetString("PlayerName", name);
+        PlayerPrefs.Save();
+
+        Debug.Log("Player name updated in UI: " + name);
+    }
+
     public void ShowGameplayPanel()
     {
         gameplayPanel.SetActive(true);
         networkConfigPanel.SetActive(false);
         teamPanel.SetActive(false);
         optionsPanel.SetActive(false);
+        Debug.Log("Gameplay panel activated.");
     }
 
     public void ShowNetworkConfigPanel()

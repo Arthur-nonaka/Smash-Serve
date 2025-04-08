@@ -56,7 +56,7 @@ public class DiveHitbox : NetworkBehaviour
             Rigidbody ballRb = other.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
-                if (!playerController.IsSameSide())
+                if (!playerController.IsSameSide(ball))
                 {
                     return;
                 }

@@ -13,10 +13,10 @@ public class BallSpawner : NetworkBehaviour
             CmdSpawnBall();
         }
 
-        if (isLocalPlayer && Input.GetKeyDown(KeyCode.E))
-        {
-            CmdSpawnBallVelocity();
-        }
+        // if (isLocalPlayer && Input.GetKeyDown(KeyCode.E))
+        // {
+        //     CmdSpawnBallVelocity();
+        // }
     }
 
     [Command]
@@ -55,6 +55,26 @@ public class BallSpawner : NetworkBehaviour
         if (ballRb != null)
         {
             ballRb.linearVelocity = transform.forward * -23f;
+        }
+        else
+        {
+            Debug.LogError("Rigidbody not found on the ball prefab.");
+        }
+
+        NetworkServer.Spawn(ball);
+    }
+
+    [Command]
+    public void CmdSpawnBallTutorialBump()
+    {
+        Vector3 spawnPosition = new Vector3(-11, 6, -40);
+
+        GameObject ball = Instantiate(ballPrefab, spawnPosition, Quaternion.identity);
+        Rigidbody ballRb = ball.GetComponent<Rigidbody>();
+
+        if (ballRb != null)
+        {
+            ballRb.linearVelocity = new Vector3(10, 5, 0);
         }
         else
         {

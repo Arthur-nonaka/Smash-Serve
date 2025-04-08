@@ -8,7 +8,7 @@ public class BumpHitbox : NetworkBehaviour
     public float chargeSpeed = 3.0f;
     public float maxChargeTime = 0.001f;
 
-    private Slider powerSlider;
+    private Image powerCircle;
 
     public float mancheteForce = 3.0f;
     public Transform playerCamera;
@@ -36,7 +36,7 @@ public class BumpHitbox : NetworkBehaviour
             Debug.LogError("No NetworkIdentity found on parent object.");
         }
 
-        powerSlider = GameObject.FindGameObjectWithTag("powerSlider").GetComponent<Slider>();
+        powerCircle = GameObject.FindGameObjectWithTag("powerSlider").GetComponent<Image>();
         hitboxCollider = GetComponent<Collider>();
         hitboxCollider.enabled = false;
         playerMovement = FindFirstObjectByType<PlayerController>();
@@ -52,7 +52,7 @@ public class BumpHitbox : NetworkBehaviour
             isCharging = true;
             hitChargeTime = 0f;
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
-            powerSlider.value = powerPercent;
+            powerCircle.fillAmount = powerPercent / 100f;
             hitboxCollider.enabled = true;
         }
         if (Input.GetMouseButton(0) && isCharging && playerMovement.GetIsGrounded())
@@ -60,14 +60,14 @@ public class BumpHitbox : NetworkBehaviour
             hitChargeTime += Time.deltaTime * chargeSpeed;
             hitChargeTime = Mathf.Clamp(hitChargeTime, 0, maxChargeTime);
             float powerPercent = (hitChargeTime / maxChargeTime) * 100f;
-            powerSlider.value = powerPercent;
+            powerCircle.fillAmount = powerPercent / 100f;
         }
         if (Input.GetMouseButtonUp(1) && playerMovement.GetIsGrounded() && !playerMovement.isServing)
         {
             Debug.Log("Mouse right button up");
             isCharging = false;
             hitboxCollider.enabled = false;
-            powerSlider.value = 0f;
+            powerCircle.fillAmount = 0f;
             hitChargeTime = 0f;
         }
     }
@@ -80,7 +80,7 @@ public class BumpHitbox : NetworkBehaviour
             Rigidbody ballRb = ball.GetComponent<Rigidbody>();
             if (ballRb != null)
             {
-                if (!playerMovement.IsSameSide() || !playerMovement.GetIsGrounded())
+                if (!playerMovement.IsSameSide(ball) || !playerMovement.GetIsGrounded())
                 {
                     return;
                 }
@@ -88,12 +88,21 @@ public class BumpHitbox : NetworkBehaviour
 
                 Vector3 cameraForward = playerCamera.forward;
                 Vector3 horizontalDirection = new Vector3(cameraForward.x, 0, cameraForward.z).normalized;
+                horizontalDirection *= 1.7f;
                 float cameraPitchDegrees = playerCamera.eulerAngles.x;
                 float cameraPitchRadians = cameraPitchDegrees * Mathf.Deg2Rad;
                 float horizontalReductionFactor = Mathf.Clamp01(1 - 0.4f * Mathf.Pow(Mathf.Sin(cameraPitchRadians), 2));
                 horizontalDirection *= horizontalReductionFactor;
-                float verticalForce = 5f;
+                float verticalForce = 4f;
+
+                if (Input.GetKey(KeybindManager.Instance.GetKey("Backwards")) || Input.GetKey(KeyCode.RightControl))
+                {
+                    horizontalDirection = -horizontalDirection;
+                }
+
                 Vector3 bumpDirection = horizontalDirection + Vector3.up * verticalForce;
+
+
                 StartCoroutine(animationController.SetAnimatorBoolWithDelay("Bump", true, 0.5f));
                 float hitPower = mancheteForce * (hitChargeTime + 2f);
                 float randomDirection = Random.Range(-0.03f, 0.03f);
@@ -102,14 +111,14 @@ public class BumpHitbox : NetworkBehaviour
                 Vector3 hitboxCenter = hitboxCollider.bounds.center;
                 Vector3 relativeHit = ball.transform.position - hitboxCenter;
                 Vector3 localHit = transform.InverseTransformDirection(relativeHit);
-                if (localHit.x < -0.25f)
+                if (localHit.x < -0.6f)
                 {
                     Debug.Log("Left side");
                     float lateralForce = Random.Range(-0.1f, -1f);
                     float verticalForceRandom = Random.Range(-1f, 1f);
                     bumpDirection += transform.right * lateralForce + transform.forward * verticalForceRandom;
                 }
-                else if (localHit.x > 0.25f)
+                else if (localHit.x > 0.6f)
                 {
                     float lateralForce = Random.Range(0.3f, 1f);
                     float verticalForceRandom = Random.Range(-1f, 1f);

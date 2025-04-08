@@ -1,48 +1,87 @@
 using UnityEngine;
-
-public class NetScript : MonoBehaviour
+using Mirror;
+public class NetScript : NetworkBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+
+    void OnTriggerEnter(Collider collision)
     {
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
-
-    void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Ball"))
+        if (collision.CompareTag("Ball"))
         {
-            // Check if the collision point is near the top of the net
-            Vector3 hitPoint = collision.contacts[0].point;
+            Debug.Log("Ball hit the net.");
+            Vector3 hitPoint = collision.ClosestPoint(transform.position);
             if (IsNearTopOfNet(hitPoint))
             {
-                Rigidbody ballRb = collision.gameObject.GetComponent<Rigidbody>();
-                if (ballRb != null)
+                if (isServer)
                 {
-                    // Calculate a realistic deflection:
-                    // Reduce forward speed, add upward bounce.
-                    Vector3 currentVelocity = ballRb.linearVelocity;
-                    Vector3 deflection = new Vector3(currentVelocity.x * 0.5f, Mathf.Abs(currentVelocity.y) + 2f, currentVelocity.z * 0.5f);
+                    Rigidbody ballRb = collision.gameObject.GetComponent<Rigidbody>();
+                    if (ballRb != null)
+                    {
+                        Vector3 currentVelocity = ballRb.linearVelocity;
+                        Vector3 deflection = new Vector3(currentVelocity.x * Random.Range(0.1f, 0.3f), 1f, currentVelocity.z * Random.Range(0.1f, 0.3f));
 
-                    ballRb.linearVelocity = deflection;
+                        ballRb.linearVelocity = deflection;
 
-                    Debug.Log("Ball hit the net top and deflected realistically.");
+                        Vector3 randomSpin = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * 2f;
+
+                        ballRb.angularVelocity = randomSpin;
+
+                        NetworkIdentity ballIdentity = collision.gameObject.GetComponent<NetworkIdentity>();
+                        if (!ballIdentity != null)
+                        {
+                            RpcUpdateBallVelocity(ballIdentity.netId, deflection, randomSpin);
+                        }
+
+                        Debug.Log("Ball hit the net top and deflected realistically.");
+                    }
                 }
+            }
+            else
+            {
+                if (isServer)
+                {
+                    Rigidbody ballRb = collision.gameObject.GetComponent<Rigidbody>();
+                    if (ballRb != null)
+                    {
+                        Vector3 currentVelocity = ballRb.linearVelocity;
+                        Vector3 deflection = new Vector3(currentVelocity.x * 0.1f, 0.3f, currentVelocity.z * 0.1f);
+
+                        ballRb.linearVelocity = deflection;
+
+                        Vector3 randomSpin = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * 2f;
+
+                        ballRb.angularVelocity = randomSpin;
+
+                        NetworkIdentity ballIdentity = collision.gameObject.GetComponent<NetworkIdentity>();
+                        if (!ballIdentity != null)
+                        {
+                            RpcUpdateBallVelocity(ballIdentity.netId, deflection, randomSpin);
+                        }
+
+                        Debug.Log("Ball hit the net and deflected realistically.");
+                    }
+                }
+            }
+        }
+    }
+
+    [ClientRpc]
+    void RpcUpdateBallVelocity(uint ballNetId, Vector3 newVelocity, Vector3 newAngularVelocity)
+    {
+        if (NetworkServer.spawned.TryGetValue(ballNetId, out NetworkIdentity ballIdentity))
+        {
+            Rigidbody ballRb = ballIdentity.GetComponent<Rigidbody>();
+            if (ballRb != null)
+            {
+                ballRb.linearVelocity = newVelocity;
+                ballRb.angularVelocity = newAngularVelocity;
             }
         }
     }
 
     bool IsNearTopOfNet(Vector3 hitPoint)
     {
-        // Define a threshold for what is considered "near the top" of the net.
-        // For example, if the net's top is at a known Y value, you could:
         float netTopY = transform.position.y + (transform.localScale.y / 2f);
-        return Mathf.Abs(hitPoint.y - netTopY) < 0.2f; // Adjust threshold as needed
+        Debug.Log($"Net top Y: {netTopY}, Hit point Y: {hitPoint.y}");
+        return Mathf.Abs(hitPoint.y - netTopY) < 64.566f;
     }
 }
